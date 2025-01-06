@@ -52,21 +52,24 @@ function App() {
 
   const initializeSession = async (id) => {
     try {
-      const response = await fetch("/api/initialize-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prolificId: id,
-          metadata: {
-            browser: navigator.userAgent,
-            platform: navigator.platform,
-            screenSize: {
-              width: window.innerWidth,
-              height: window.innerHeight,
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/initialize-session`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prolificId: id,
+            metadata: {
+              browser: navigator.userAgent,
+              platform: navigator.platform,
+              screenSize: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+              },
             },
-          },
-        }),
-      });
+          }),
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to initialize session");
       const data = await response.json();
@@ -114,20 +117,23 @@ function App() {
     }
 
     try {
-      const response = await fetch("/api/meanings/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          prolificId,
-          wordMeanings: meanings.map((m) => ({
-            word: m.word,
-            providedMeaning: m.providedMeaning,
-            isCorrect: null,
-          })),
-          completedAt: new Date().toISOString(),
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/meanings/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            prolificId,
+            wordMeanings: meanings.map((m) => ({
+              word: m.word,
+              providedMeaning: m.providedMeaning,
+              isCorrect: null,
+            })),
+            completedAt: new Date().toISOString(),
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
