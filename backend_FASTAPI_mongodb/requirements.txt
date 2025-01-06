@@ -3,8 +3,8 @@ uvicorn
 pydantic
 python-dotenv
 pymongo
-pandas
-matplotlib
-seaborn
-notebook
+# pandas
+# matplotlib
+# seaborn
+# notebook
 motor
