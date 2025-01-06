@@ -1,11 +1,10 @@
+# render.yaml
 services:
   - type: web
     name: anagram-game
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
-      cd frontend_game_UI && npm install && npm run build
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: cd backend_FASTAPI_mongodb && pip install -r requirements.txt
+    startCommand: cd backend_FASTAPI_mongodb && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGODB_URI
         sync: false
