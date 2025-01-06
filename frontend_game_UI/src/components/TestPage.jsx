@@ -12,21 +12,24 @@ const TestPage = ({ prolificId, sessionId: existingSessionId, onComplete }) => {
   // Initialize session
   const initializeSession = useCallback(async () => {
     try {
-      const response = await fetch("/api/initialize-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prolificId,
-          metadata: {
-            browser: navigator.userAgent,
-            platform: navigator.platform,
-            screenSize: {
-              width: window.innerWidth,
-              height: window.innerHeight,
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/initialize-session`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prolificId,
+            metadata: {
+              browser: navigator.userAgent,
+              platform: navigator.platform,
+              screenSize: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+              },
             },
-          },
-        }),
-      });
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

@@ -39,7 +39,9 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
   useEffect(() => {
     const fetchStudyConfig = async () => {
       try {
-        const response = await fetch("/api/study-config");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/study-config`
+        );
         const config = await response.json();
         setStudyConfig(config);
         setGameState((prev) => ({
@@ -95,7 +97,7 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
           timestamp: new Date().toISOString(),
         };
 
-        await fetch("/api/game-events", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/game-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(eventBody),
@@ -208,7 +210,9 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       // Only initialize if we're in loading phase
       if (gameState.phase !== "loading") return;
 
-      const response = await fetch(`/api/game/init?sessionId=${sessionId}`);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/game/init?sessionId=${sessionId}`
+      );
       const responseData = await response.json();
 
       if (!response.ok) {
@@ -375,20 +379,23 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       );
 
       // Submit words
-      const response = await fetch("/api/word-submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          prolificId,
-          phase: "main_game",
-          anagramShown: gameState.currentWord,
-          submittedWords,
-          totalReward,
-          timeSpent: currentTimeSpent,
-          submittedAt: new Date().toISOString(),
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/word-submissions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            prolificId,
+            phase: "main_game",
+            anagramShown: gameState.currentWord,
+            submittedWords,
+            totalReward,
+            timeSpent: currentTimeSpent,
+            submittedAt: new Date().toISOString(),
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -416,7 +423,11 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       if (gameState.wordIndex < gameState.totalAnagrams - 1) {
         // Fetch next anagram
         const response = await fetch(
-          `/api/game/next?sessionId=${sessionId}&currentIndex=${gameState.wordIndex}`
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/game/next?sessionId=${sessionId}&currentIndex=${
+            gameState.wordIndex
+          }`
         );
         const data = await response.json();
 

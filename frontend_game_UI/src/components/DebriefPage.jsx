@@ -10,7 +10,9 @@ const DebriefPage = ({ sessionId, prolificId, onComplete }) => {
     const fetchResults = async () => {
       try {
         const response = await fetch(
-          `/api/game-results?sessionId=${sessionId}&prolificId=${prolificId}`
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/game-results?sessionId=${sessionId}&prolificId=${prolificId}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch results");

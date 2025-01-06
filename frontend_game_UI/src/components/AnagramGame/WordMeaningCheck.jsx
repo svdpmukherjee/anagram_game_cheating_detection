@@ -75,7 +75,7 @@ const WordMeaningCheck = ({
           timestamp: new Date().toISOString(),
         };
 
-        await fetch("/api/game-events", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/game-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(eventBody),
@@ -208,7 +208,7 @@ const WordMeaningCheck = ({
           isCorrect: null, // Will be validated by backend
         }));
 
-        await fetch("/api/meanings/submit", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/meanings/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

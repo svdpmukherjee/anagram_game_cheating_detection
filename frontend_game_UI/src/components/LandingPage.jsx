@@ -12,7 +12,9 @@ const LandingPage = ({ onStartStudy }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch("/api/study-config");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/study-config`
+        );
         if (!response.ok) {
           throw new Error(
             `Failed to fetch study config: ${response.statusText}`

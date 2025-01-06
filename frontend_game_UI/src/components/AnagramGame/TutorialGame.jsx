@@ -39,7 +39,7 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   const logGameEvent = useCallback(
     async (eventType, details = null) => {
       try {
-        await fetch("/api/game-events", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/game-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -150,8 +150,12 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   const initTutorial = useCallback(async () => {
     try {
       const [configResponse, tutorialResponse] = await Promise.all([
-        fetch("/api/study-config"),
-        fetch(`/api/tutorial/init?sessionId=${sessionId}`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/study-config`),
+        fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/tutorial/init?sessionId=${sessionId}`
+        ),
       ]);
 
       const [configData, tutorialData] = await Promise.all([
@@ -282,7 +286,7 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
       });
 
       // Update tutorial completion status
-      await fetch("/api/tutorial/complete", {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/tutorial/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
