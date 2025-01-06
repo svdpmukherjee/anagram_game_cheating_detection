@@ -19,7 +19,7 @@ app = FastAPI()
 # CORS middleware setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://anagram-game-cheating-detection.vercel.app/"],
+    allow_origins=["https://anagram-game-cheating-detection.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
