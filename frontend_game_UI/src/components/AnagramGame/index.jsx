@@ -424,7 +424,7 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       // Check if this is the final anagram submission
       if (gameState.wordIndex >= gameState.totalAnagrams - 1) {
         // Show completion alert before moving to next phase
-        alert("You have now completed all anagrams in the game");
+        alert("You have now completed all words in the game");
       }
 
       // Check if there are more anagrams

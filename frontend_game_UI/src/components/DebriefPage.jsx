@@ -23,9 +23,11 @@ const DebriefPage = ({ sessionId, prolificId, onComplete }) => {
       try {
         const [resultsRes, configRes] = await Promise.all([
           fetch(
-            `/api/game-results?sessionId=${sessionId}&prolificId=${prolificId}`
+            `${
+              import.meta.env.VITE_API_URL
+            }/api/game-results?sessionId=${sessionId}&prolificId=${prolificId}`
           ),
-          fetch("/api/study-config"),
+          fetch(`${import.meta.env.VITE_API_URL}/api/study-config`),
         ]);
 
         if (!resultsRes.ok || !configRes.ok) {
@@ -99,18 +101,21 @@ const DebriefPage = ({ sessionId, prolificId, onComplete }) => {
         // responseTimestamp: new Date().toISOString(),
       };
 
-      const response = await fetch("/api/game-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          prolificId,
-          phase: "debrief",
-          eventType: "confessed_external_help",
-          details: eventDetails,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/game-events`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            prolificId,
+            phase: "debrief",
+            eventType: "confessed_external_help",
+            details: eventDetails,
+            timestamp: new Date().toISOString(),
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to log resource usage response");

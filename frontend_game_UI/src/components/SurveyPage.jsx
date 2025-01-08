@@ -166,9 +166,9 @@ const SurveyPage = ({ onComplete }) => {
         </div>
 
         {/* Help Text */}
-        <div className="text-center text-sm text-gray-500">
+        {/* <div className="text-center text-sm text-gray-500">
           Having trouble? Contact us at support@uni.lu for assistance
-        </div>
+        </div> */}
       </div>
     </Container>
   );
