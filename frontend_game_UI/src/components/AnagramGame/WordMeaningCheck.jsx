@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, ChevronRight } from "lucide-react";
 
 const WordMeaningCheck = ({
   validatedWords = [],
@@ -13,6 +13,7 @@ const WordMeaningCheck = ({
   const [uniqueWords, setUniqueWords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showIntro, setShowIntro] = useState(true);
 
   // Tracking refs
   const startTime = useRef(new Date());
@@ -25,10 +26,8 @@ const WordMeaningCheck = ({
   const ignoreNextBlur = useRef(false);
 
   // Initialize unique words
-  // In WordMeaningCheck.jsx
   useEffect(() => {
     try {
-      // Get unique words from all validated words
       const uniqueWordsMap = new Map();
       validatedWords.forEach((word) => {
         if (!uniqueWordsMap.has(word.word)) {
@@ -50,9 +49,6 @@ const WordMeaningCheck = ({
       setLoading(false);
     }
   }, [validatedWords]);
-
-  // Log events to MongoDB
-  // In WordMeaningCheck.jsx, update the logEvent function:
 
   const logEvent = useCallback(
     async (eventType, details = {}) => {
@@ -87,7 +83,7 @@ const WordMeaningCheck = ({
     [sessionId, prolificId, uniqueWords, currentIndex]
   );
 
-  // Activity tracking
+  // Activity tracking effect
   useEffect(() => {
     if (isSubmitted.current) return;
 
@@ -148,7 +144,7 @@ const WordMeaningCheck = ({
     inactivityCheckInterval.current = setInterval(() => {
       if (!isPageActive || isSubmitted.current) return;
       const timeSinceLastActivity = Date.now() - lastUserActivity.current;
-      if (!isInactive.current && timeSinceLastActivity > 5000) {
+      if (!isInactive.current && timeSinceLastActivity > 10000) {
         logEvent("mouse_inactive_start");
         isInactive.current = true;
       }
@@ -173,7 +169,6 @@ const WordMeaningCheck = ({
     };
   }, [logEvent]);
 
-  // Handle meaning submission
   const handleSubmit = async (meaning) => {
     const currentWord = uniqueWords[currentIndex];
     if (!currentWord) return;
@@ -262,28 +257,55 @@ const WordMeaningCheck = ({
     );
   }
 
+  // Show introduction screen
+  if (showIntro) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 bg-blue-50 p-6 rounded-lg">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800">
+                  Thank you for creating words and completing the survey!
+                </h3>
+                {/* <p className="text-blue-700">
+                  Thank you for word creation followed by completing the survey!{" "}
+                </p> */}
+                <div className="flex ">
+                  <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-1" />
+                  <p className="ml-2">
+                    <span className="font-semibold text-amber-600">
+                      Some of the words you created were not found in our
+                      dictionary.
+                    </span>
+                  </p>
+                </div>
+                <p className="text-blue-700">
+                  To help us understand your word-building process, could you
+                  explain what meaning you had in mind for each word you
+                  created?
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowIntro(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              Continue
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show word meaning check interface
   const currentWord = uniqueWords[currentIndex];
 
   return (
     <div className="space-y-6">
-      {/* Instructions */}
-      <div className="bg-blue-50 p-6 rounded-lg">
-        <div className="flex items-start gap-3">
-          <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="space-y-2">
-            <p className="text-blue-700">
-              Please provide the meaning of each word you created during the
-              anagram task, based on your understanding.
-            </p>
-            <p className="text-sm text-blue-600">
-              Your responses help us understand how you approached the
-              word-creation task.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         {/* Progress Bar */}
         <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
@@ -305,9 +327,6 @@ const WordMeaningCheck = ({
           <h3 className="text-3xl font-bold text-blue-600">
             {currentWord.word}
           </h3>
-          <p className="text-gray-500 text-sm mt-1">
-            ({currentWord.length} letters • {currentWord.reward || 0}p reward)
-          </p>
         </div>
 
         {/* Input Area */}

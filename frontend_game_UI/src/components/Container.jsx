@@ -1,10 +1,8 @@
-import React from "react";
-
 const Container = ({ children }) => (
   <div className="min-h-screen bg-gray-100 overflow-x-hidden">
-    <div className="py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6 lg:px-8">
-      <div className="max-w-3xl sm:max-w-4xl md:max-w-5xl lg:max-w-7xl mx-auto w-full">
-        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="py-4 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8 lg:px-10">
+      <div className="max-w-4xl sm:max-w-5xl md:max-w-6xl lg:max-w-7xl mx-auto w-full">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 md:p-8 lg:p-10">
           {children}
         </div>
       </div>

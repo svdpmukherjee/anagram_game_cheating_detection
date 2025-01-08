@@ -2,12 +2,29 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
+class WordWithAnagram(BaseModel):
+    word: str
+    length: Optional[int]
+    isValid: bool
+    anagramShown: str
+
+class ResourceUsageDetails(BaseModel):
+    usedExternalResources: bool
+    wordsWithExternalHelp: List[WordWithAnagram]
+    totalWordsChecked: int
+    responseTimestamp: datetime
+
 class ValidWord(BaseModel):
     word: str
     length: int
     reward: Optional[int] = None
     validatedAt: Optional[datetime] = None
     isValid: Optional[bool] = None
+    anagramShown: Optional[str] = None
+    
+class AnagramDetail(BaseModel):
+    anagram: str
+    words: List[ValidWord]
     
 class Metadata(BaseModel):
     browser: str
@@ -34,14 +51,18 @@ class GameEventDetails(BaseModel):
     providedMeaning: Optional[str] = None
     anagram: Optional[str] = None
     wordIndex: Optional[int] = None
+    usedExternalResources: Optional[bool] = None
+    wordsWithExternalHelp: Optional[List[WordWithAnagram]] = None
+    totalWordsChecked: Optional[int] = None
+    responseTimestamp: Optional[datetime] = None
 
 class GameEvent(BaseModel):
     sessionId: str
     prolificId: str
-    phase: str  # "tutorial", "main_game", "meaning_check"
+    phase: str
     currentTheoryId: Optional[int] = None
     anagramShown: Optional[str] = None
-    eventType: str  # Possible values defined in documentation
+    eventType: str
     details: Optional[GameEventDetails] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 

@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://anagram-game-cheating-detection.onrender.com",
+        // target: "https://anagram-game-cheating-detection.onrender.com",
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
     },

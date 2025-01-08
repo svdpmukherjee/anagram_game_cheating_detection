@@ -75,7 +75,7 @@ const LandingPage = ({ onStartStudy }) => {
     <Container>
       <div className="max-w-4xl mx-auto space-y-6 mb-8">
         {/* Header Section */}
-        <section className="text-center bg-gray-50 p-6 rounded-xl">
+        {/* <section className="text-center bg-gray-50 p-6 rounded-xl">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
             Anagram Word Game Study
           </h2>
@@ -83,7 +83,7 @@ const LandingPage = ({ onStartStudy }) => {
             Create Valid English words from scrambled letters. Longer words earn
             higher rewards!
           </p>
-        </section>
+        </section> */}
 
         {/* Study Overview */}
         <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -151,26 +151,40 @@ const LandingPage = ({ onStartStudy }) => {
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
               <ul className="text-md text-gray-600 space-y-3">
-                <li className="flex items-start">
-                  <span className="bg-green-100 rounded-full p-1 mr-2 mt-0.5">
+                <li className="flex items-center">
+                  <span className="bg-green-100 rounded-full p-1 mr-2">
                     <span className="block h-1.5 w-1.5 bg-green-600 rounded-full"></span>
                   </span>
-                  Practice round (1 word,{" "}
-                  {studyConfig.timeSettings.tutorial_time / 60} minutes)
+                  <div>
+                    <span className="font-semibold">Practice round</span>{" "}
+                    <span className="text-gray-500">
+                      (1 word, {studyConfig.timeSettings.tutorial_time / 60}{" "}
+                      minutes)
+                    </span>
+                  </div>
                 </li>
-                <li className="flex items-start">
-                  <span className="bg-green-100 rounded-full p-1 mr-2 mt-0.5">
+                <li className="flex items-center">
+                  <span className="bg-green-100 rounded-full p-1 mr-2">
                     <span className="block h-1.5 w-1.5 bg-green-600 rounded-full"></span>
                   </span>
-                  Game round ({studyConfig.game_anagrams} words,{" "}
-                  {studyConfig.timeSettings.game_time / 60} minutes each)
+                  <div>
+                    <span className="font-semibold">Game round</span>{" "}
+                    <span className="text-gray-500">
+                      ({studyConfig.game_anagrams} words,{" "}
+                      {studyConfig.timeSettings.game_time / 60} minutes each)
+                    </span>
+                  </div>
                 </li>
-                <li className="flex items-start">
-                  <span className="bg-green-100 rounded-full p-1 mr-2 mt-0.5">
+                <li className="flex items-center">
+                  <span className="bg-green-100 rounded-full p-1 mr-2">
                     <span className="block h-1.5 w-1.5 bg-green-600 rounded-full"></span>
                   </span>
-                  Quick survey ({studyConfig.timeSettings.survey_time / 60}{" "}
-                  minutes)
+                  <div>
+                    <span className="font-semibold">Quick survey</span>{" "}
+                    <span className="text-gray-500">
+                      ({studyConfig.timeSettings.survey_time / 60} minutes)
+                    </span>
+                  </div>
                 </li>
               </ul>
               <p className="font-medium text-gray-700 mt-4">
@@ -197,15 +211,29 @@ const LandingPage = ({ onStartStudy }) => {
               <div className="space-y-2">
                 {Object.entries(studyConfig.rewards)
                   .sort(([a], [b]) => Number(b) - Number(a))
-                  .map(([length, reward]) => (
-                    <div key={length} className="flex items-center">
-                      <CoinIcon className="h-5 w-5 text-amber-600 mr-2" />
-                      <span className="text-gray-600 text-sm">
-                        {reward}p for {length}-letter words
-                      </span>
-                    </div>
-                  ))}
+                  .map(([length, reward], index) => {
+                    // Define an array of colors for each reward category
+                    const colors = [
+                      "text-amber-800",
+                      "text-amber-700",
+                      "text-amber-600",
+                      "text-amber-500",
+                    ];
+                    // Assign a color based on the index, defaulting to the last color if the index exceeds the array length
+                    const colorClass =
+                      colors[index] || colors[colors.length - 1];
+
+                    return (
+                      <div key={length} className="flex items-center">
+                        <CoinIcon className={`h-5 w-5 ${colorClass} mr-2`} />
+                        <span className="text-gray-600 text-sm">
+                          {reward}p for {length}-letter words
+                        </span>
+                      </div>
+                    );
+                  })}
               </div>
+
               <p className=" bg-yellow-50 rounded-lg mt-4 text-yellow-800">
                 Maximum reward per anagram:{" "}
                 {studyConfig.compensation.max_reward_per_anagram}p
@@ -280,8 +308,8 @@ const LandingPage = ({ onStartStudy }) => {
               className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
             <label htmlFor="consent" className="text-gray-700">
-              I have read and understood the above information and agree to
-              participate in this study.
+              I have read the above information and agree to participate in this
+              study.
             </label>
           </div>
 

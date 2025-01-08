@@ -18,9 +18,9 @@ const ThankYouPage = ({ prolificId, startTime, endTime }) => {
 
         {/* Main Thank You Message */}
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+          {/* <h2 className="text-3xl font-bold text-gray-800 mb-4">
             Thank You for Participating!
-          </h2>
+          </h2> */}
           <p className="text-lg text-gray-600 mb-6">
             Your responses have been successfully recorded.
           </p>
@@ -28,9 +28,9 @@ const ThankYouPage = ({ prolificId, startTime, endTime }) => {
 
         {/* Study Information */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-blue-800 mb-3">
+          {/* <h3 className="text-lg font-semibold text-blue-800 mb-3">
             Study Details
-          </h3>
+          </h3> */}
           <ul className="text-gray-700 space-y-2">
             <li>
               Your Participant ID:{" "}

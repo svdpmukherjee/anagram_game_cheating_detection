@@ -153,7 +153,7 @@ def initialize_database():
             return False
 
         print("✓ Configuration verification passed")
-        print("Configuration structure:", config_check)
+        # print("Configuration structure:", config_check)
 
         # Create indices
         db.sessions.create_index("prolificId", unique=True)

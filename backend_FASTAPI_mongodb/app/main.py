@@ -19,7 +19,8 @@ app = FastAPI()
 # CORS middleware setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://anagram-game-cheating-detection.vercel.app"],
+    # allow_origins=["https://anagram-game-cheating-detection.vercel.app"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -313,7 +314,7 @@ async def initialize_game(sessionId: str):
             status_code=500,
             detail=f"Failed to initialize game: {str(e)}"
         )
-
+        
 @app.get("/api/game/next")
 async def get_next_anagram(sessionId: str, currentIndex: int):
     """Get next anagram in sequence."""
@@ -432,9 +433,7 @@ async def submit_word_meanings(request: dict):
 
 @app.get("/api/game-results")
 async def get_game_results(sessionId: str, prolificId: str):
-    """Get game results with enhanced validation."""
     try:
-        # Find the session
         session = await app.database.sessions.find_one({
             "_id": ObjectId(sessionId),
             "prolificId": prolificId
@@ -443,26 +442,23 @@ async def get_game_results(sessionId: str, prolificId: str):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Get game configuration for validation
         config = await app.database.game_config.find_one({})
         if not config:
             raise HTTPException(status_code=404, detail="Game configuration not found")
 
-        # Get validation events
+        # Get game events for validation and removal tracking
         validation_events = await app.database.game_events.find({
             "sessionId": sessionId,
             "prolificId": prolificId,
             "eventType": "word_validation"
         }).to_list(None)
 
-        # Get word removal events
         removal_events = await app.database.game_events.find({
             "sessionId": sessionId,
             "prolificId": prolificId,
             "eventType": "word_removal"
         }).to_list(None)
 
-        # Create set of removed words
         removed_words = {
             event.get("details", {}).get("word", "").upper()
             for event in removal_events
@@ -472,20 +468,22 @@ async def get_game_results(sessionId: str, prolificId: str):
         invalid_words = []
         total_reward = 0
         seen_words = set()
+        anagram_details = []
 
-        # Process all anagrams from the session
         main_game = session.get("gameState", {}).get("completionStatus", {}).get("mainGame", {})
         anagrams = main_game.get("anagrams", [])
 
-        for anagram in anagrams:
-            current_word = anagram.get("word")
+        for anagram_entry in anagrams:
+            current_anagram = anagram_entry.get("word")
+            current_words = []
+            
             solutions = next(
                 (a["solutions"] for a in config["game_config"]["game_anagrams"] 
-                 if a["word"] == current_word),
+                 if a["word"] == current_anagram),
                 {}
             )
 
-            for word_entry in anagram.get("validatedWords", []):
+            for word_entry in anagram_entry.get("validatedWords", []):
                 word = word_entry.get("word", "").upper()
                 if word in removed_words or word in seen_words:
                     continue
@@ -493,26 +491,33 @@ async def get_game_results(sessionId: str, prolificId: str):
                 seen_words.add(word)
                 length = str(word_entry.get("length"))
                 is_valid = word in [s.upper() for s in solutions.get(length, [])]
+                word_data = {
+                    "word": word,
+                    "length": word_entry.get("length"),
+                    "anagramShown": current_anagram
+                }
 
                 if is_valid:
                     reward = config["rewards"].get(length, 0)
-                    valid_words.append({
-                        "word": word,
-                        "length": word_entry.get("length"),
-                        "reward": reward
-                    })
+                    word_data["reward"] = reward
+                    valid_words.append(word_data)
+                    current_words.append(word_data)
                     total_reward += reward
                 else:
-                    invalid_words.append({
-                        "word": word,
-                        "length": word_entry.get("length")
-                    })
+                    invalid_words.append(word_data)
+                    current_words.append(word_data)
+
+            anagram_details.append({
+                "anagram": current_anagram,
+                "words": current_words
+            })
 
         return {
             "validWords": valid_words,
             "invalidWords": invalid_words,
             "totalReward": total_reward,
-            "anagramsAttempted": len(anagrams)
+            "anagramsAttempted": len(anagrams),
+            "anagramDetails": anagram_details
         }
 
     except Exception as e:

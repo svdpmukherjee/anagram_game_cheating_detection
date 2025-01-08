@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Send, Check, X } from "lucide-react";
+import { Send, Check } from "lucide-react";
 import GameTimer from "./GameTimer";
 
 const GameBoard = ({
@@ -9,70 +9,43 @@ const GameBoard = ({
   onSolutionChange,
   onValidate,
   onSubmit,
-  onRemoveWord,
   wordIndex,
   totalWords,
   timeLeft,
   totalTime,
   isTimeUp,
+  onRemoveWord,
   validatedWords,
   isTutorial = false,
 }) => {
+  // Memoize handlers
   const handleDragStart = useCallback((e, letter, index, source) => {
-    e.dataTransfer.setData(
-      "text/plain",
-      JSON.stringify({
-        letter,
-        index,
-        source,
-      })
-    );
+    const timestamp = Date.now();
+    e.dataTransfer.setData("letter", letter);
+    e.dataTransfer.setData("index", index.toString());
+    e.dataTransfer.setData("source", source);
   }, []);
 
   const handleDrop = useCallback(
     (e, targetArea, targetIndex) => {
       e.preventDefault();
-      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-      const { letter, index: sourceIndex, source: sourceArea } = data;
+      const letter = e.dataTransfer.getData("letter");
+      const sourceIndex = parseInt(e.dataTransfer.getData("index"));
+      const sourceArea = e.dataTransfer.getData("source");
+      const timestamp = Date.now();
 
       let newSolution = [...solution];
       let newAvailable = [...availableLetters];
 
-      // Get correct target index based on drop position
-      const dropRect = e.currentTarget.getBoundingClientRect();
-      const mouseX = e.clientX;
-      const letterWidth =
-        dropRect.width /
-        (targetArea === "solution"
-          ? newSolution.length + 1
-          : newAvailable.length + 1);
-      let insertIndex = Math.floor((mouseX - dropRect.left) / letterWidth);
-
-      // Clamp index to valid range
-      insertIndex = Math.max(
-        0,
-        Math.min(
-          insertIndex,
-          targetArea === "solution" ? newSolution.length : newAvailable.length
-        )
-      );
-
-      if (sourceArea === targetArea) {
-        if (sourceArea === "solution") {
-          newSolution = newSolution.filter((_, idx) => idx !== sourceIndex);
-          newSolution.splice(insertIndex, 0, letter);
-        } else {
-          newAvailable = newAvailable.filter((_, idx) => idx !== sourceIndex);
-          newAvailable.splice(insertIndex, 0, letter);
-        }
-      } else {
-        if (sourceArea === "available") {
-          newAvailable = newAvailable.filter((_, idx) => idx !== sourceIndex);
-          newSolution.splice(insertIndex, 0, letter);
-        } else {
-          newSolution = newSolution.filter((_, idx) => idx !== sourceIndex);
-          newAvailable.splice(insertIndex, 0, letter);
-        }
+      if (sourceArea === "solution" && targetArea === "solution") {
+        const [removedLetter] = newSolution.splice(sourceIndex, 1);
+        newSolution.splice(targetIndex, 0, removedLetter);
+      } else if (sourceArea === "available" && targetArea === "solution") {
+        newAvailable = newAvailable.filter((_, idx) => idx !== sourceIndex);
+        newSolution.splice(targetIndex, 0, letter);
+      } else if (sourceArea === "solution" && targetArea === "available") {
+        newSolution = newSolution.filter((_, idx) => idx !== sourceIndex);
+        newAvailable.splice(targetIndex, 0, letter);
       }
 
       onSolutionChange(newSolution, newAvailable);
@@ -80,11 +53,21 @@ const GameBoard = ({
     [solution, availableLetters, onSolutionChange]
   );
 
+  const handleRemoveWord = useCallback(
+    (index) => {
+      if (typeof onRemoveWord === "function") {
+        onRemoveWord(index);
+      }
+    },
+    [onRemoveWord]
+  );
+
+  // Submit confirmation handler
   const handleSubmitConfirm = useCallback(() => {
     if (
       isTutorial &&
       !window.confirm(
-        "Are you done with practice? You will now proceed to the main game."
+        "Are you done with practice? You will now proceed to the main game"
       )
     ) {
       return;
@@ -92,6 +75,7 @@ const GameBoard = ({
     onSubmit();
   }, [isTutorial, onSubmit]);
 
+  // Memo-ize validation button disabled state
   const isValidateDisabled = solution.length < 5 || (isTimeUp && !isTutorial);
   const isSubmitDisabled =
     validatedWords.length === 0 || (isTimeUp && !isTutorial);
@@ -99,44 +83,41 @@ const GameBoard = ({
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Game Header */}
-      <div className="text-center space-y-2 bg-white p-6 rounded-xl">
+      <div
+        className={`text-center ${isTutorial ? "p-6" : ""} bg-white rounded-xl`}
+      >
         <h2 className="text-xl font-bold text-gray-800">
-          Anagram Challenge {wordIndex + 1} of {totalWords}
+          Word Challenge {wordIndex + 1} of {totalWords}
         </h2>
-        <p className="text-gray-600">
-          Create as many words as possible and validate them. Submit when ready.
-        </p>
-        <p className="font-semibold text-blue-500">
-          Longer words earn more rewards!
-        </p>
+        <span>
+          {isTutorial && (
+            <>
+              <p className="text-gray-600">
+                Create as many words as possible and validate them. Submit when
+                ready.
+              </p>
+              <p className="font-semibold text-blue-500">
+                Longer words earn more rewards!
+              </p>
+            </>
+          )}
+        </span>
       </div>
 
-      {/* Validated Words */}
+      {/* Validated Words Display */}
       {validatedWords.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-xl shadow-sm">
           <h3 className="text-sm font-semibold text-blue-800 mb-3">
             Your Validated Words ({validatedWords.length})
           </h3>
           <div className="flex flex-wrap gap-2">
             {validatedWords.map((word, idx) => (
-              <span
+              <ValidatedWord
                 key={`${word.word}-${idx}`}
-                className="px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-medium 
-                         border border-blue-200 shadow-sm hover:shadow-md transition-shadow 
-                         group relative"
-              >
-                {word.word}
-                <span className="ml-1 text-blue-500">
-                  ({word.length} letters)
-                </span>
-                <button
-                  onClick={() => onRemoveWord(idx)}
-                  className="ml-2 text-red-500 opacity-50 group-hover:opacity-100 
-                           transition-opacity cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </span>
+                word={word}
+                index={idx}
+                onRemove={handleRemoveWord}
+              />
             ))}
           </div>
         </div>
@@ -146,90 +127,145 @@ const GameBoard = ({
       <GameTimer timeLeft={timeLeft} totalTime={totalTime} />
 
       {/* Solution Area */}
-      <div
-        className="min-h-[100px] border-2 border-dashed border-gray-300 rounded-lg p-4
-                   flex flex-wrap gap-2 items-center justify-center"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => handleDrop(e, "solution", solution.length)}
-      >
-        {solution.length === 0 ? (
-          <p className="text-gray-500">Drag letters here to form a word</p>
-        ) : (
-          solution.map((letter, index) => (
-            <div
-              key={`solution-${index}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, letter, index, "solution")}
-              className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 
-                       text-white rounded-xl flex items-center justify-center 
-                       font-bold text-xl cursor-move shadow-lg hover:shadow-xl 
-                       transition-all hover:-translate-y-0.5"
-            >
-              {letter}
-            </div>
-          ))
-        )}
+      <div className="space-y-4">
+        <DropArea
+          items={solution}
+          emptyMessage="Drag letters here to form a word"
+          onDragStart={handleDragStart}
+          onDrop={handleDrop}
+          itemType="solution"
+        />
       </div>
 
       {/* Available Letters */}
-      <div
-        className="flex flex-wrap gap-2 justify-center"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => handleDrop(e, "available", availableLetters.length)}
-      >
-        {availableLetters.map((letter, index) => (
-          <div
-            key={`available-${index}`}
-            draggable
-            onDragStart={(e) => handleDragStart(e, letter, index, "available")}
-            className="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 
-                     text-white rounded-xl flex items-center justify-center 
-                     font-bold text-xl cursor-move shadow-lg hover:shadow-xl 
-                     transition-all hover:-translate-y-0.5"
-          >
-            {letter}
-          </div>
-        ))}
+      <div className="space-y-4">
+        <DropArea
+          items={availableLetters}
+          onDragStart={handleDragStart}
+          onDrop={handleDrop}
+          itemType="available"
+        />
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-4">
-        <button
+      <div className="flex gap-4 pt-4">
+        <ActionButton
           onClick={onValidate}
           disabled={isValidateDisabled}
-          className={`
-            flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium
-            transition-all duration-200
-            ${
-              isValidateDisabled
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl"
-            }
-          `}
+          icon={<Check className="w-5 h-5" />}
+          variant="green"
         >
-          <Check className="w-5 h-5" />
-          <span>Validate Word</span>
-        </button>
+          Validate Word
+        </ActionButton>
 
-        <button
+        <ActionButton
           onClick={handleSubmitConfirm}
           disabled={isSubmitDisabled}
-          className={`
-            flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium
-            transition-all duration-200
-            ${
-              isSubmitDisabled
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
-            }
-          `}
+          icon={<Send className="w-5 h-5" />}
+          variant="blue"
         >
-          <Send className="w-5 h-5" />
-          <span>{isTutorial ? "Complete Practice" : "Submit Words"}</span>
-        </button>
+          {isTutorial ? "Complete Practice" : "Submit Words"}
+        </ActionButton>
       </div>
     </div>
   );
 };
+
+// Extracted components for better organization
+const ValidatedWord = React.memo(({ word, index, onRemove }) => (
+  <span className="px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-medium border border-blue-200 shadow-sm hover:shadow-md transition-shadow group relative">
+    {word.word}
+    <span className="ml-1 text-blue-500">({word.length} letters)</span>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove(index);
+      }}
+      className="ml-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+    >
+      ×
+    </button>
+  </span>
+));
+
+const DropArea = React.memo(
+  ({ items, emptyMessage, onDragStart, onDrop, itemType }) => (
+    <div
+      className={`${
+        itemType === "solution"
+          ? "border-2 border-dashed my-12 border-gray-400 bg-gray-100 rounded-xl p-6"
+          : "rounded-xl"
+      } flex flex-wrap gap-3 items-center justify-center`}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => onDrop(e, itemType, items.length)}
+    >
+      {items.length === 0 && emptyMessage ? (
+        <p className="text-blue-500 text-center">{emptyMessage}</p>
+      ) : (
+        items.map((letter, index) => (
+          <LetterTile
+            key={`${itemType}-${index}`}
+            letter={letter}
+            index={index}
+            type={itemType}
+            onDragStart={onDragStart}
+            onDrop={onDrop}
+          />
+        ))
+      )}
+    </div>
+  )
+);
+
+const LetterTile = React.memo(
+  ({ letter, index, type, onDragStart, onDrop }) => (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, letter, index, type)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDrop(e, type, index);
+      }}
+      className={`w-10 h-10 ${
+        type === "solution"
+          ? "bg-gradient-to-br from-blue-500 to-blue-600"
+          : "bg-gradient-to-br from-gray-600 to-gray-700"
+      } text-white rounded-xl flex items-center justify-center font-bold text-xl cursor-move shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 active:scale-95`}
+    >
+      {letter}
+    </div>
+  )
+);
+
+const ActionButton = React.memo(
+  ({ onClick, disabled, children, icon, variant }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+      flex-1 py-4 px-6 rounded-xl font-medium flex items-center justify-center gap-2 transition-all
+      ${
+        disabled
+          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+          : `bg-gradient-to-r ${
+              variant === "green"
+                ? "from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                : "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+            } text-white shadow-lg hover:shadow-xl`
+      }
+    `}
+    >
+      {icon}
+      <span className="text-lg">{children}</span>
+    </button>
+  )
+);
 
 export default React.memo(GameBoard);

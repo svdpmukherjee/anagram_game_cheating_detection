@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import GameBoard from "./GameBoard";
-import { AlertTriangle, Timer, Award, Info } from "lucide-react";
+import {
+  AlertTriangle,
+  Timer,
+  Award,
+  Info,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import CoinIcon from "../CoinIcon";
 
 const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
@@ -20,6 +27,8 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showOverview, setShowOverview] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [submissionResults, setSubmissionResults] = useState(null);
 
   const startTime = useRef(new Date());
   const lastActionTime = useRef(new Date());
@@ -35,6 +44,14 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
     setNotification({ message, isError });
     setTimeout(() => setNotification(null), 3000);
   }, []);
+
+  const calculateReward = useCallback(
+    (wordLength, isValid) => {
+      if (!studyConfig?.rewards || !isValid) return 0;
+      return studyConfig.rewards[wordLength.toString()] || 0;
+    },
+    [studyConfig]
+  );
 
   const logGameEvent = useCallback(
     async (eventType, details = null) => {
@@ -276,16 +293,47 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
       const processedWords = gameState.validatedWords.map((word) => ({
         word: word.word,
         length: word.length,
-        reward: 0,
+        reward: calculateReward(word.length, isValidWord(word.word)),
         isValid: isValidWord(word.word),
       }));
+
+      // Calculate total reward and separate valid/invalid words
+      const validWords = processedWords.filter((word) => word.isValid);
+      const invalidWords = processedWords.filter((word) => !word.isValid);
+      const totalReward = validWords.reduce(
+        (sum, word) => sum + (word.reward || 0),
+        0
+      );
+
+      // Set submission results
+      setSubmissionResults({
+        validWords,
+        invalidWords,
+        totalReward,
+      });
 
       // Log the submission event
       await logGameEvent("word_submission", {
         words: processedWords,
       });
 
-      // Update tutorial completion status
+      // Show results section
+      setShowResults(true);
+    } catch (error) {
+      console.error("Tutorial submission error:", error);
+      setNotification({
+        message: "Failed to submit tutorial results. Please try again.",
+        isError: true,
+      });
+      // Reset submission states on error
+      setIsSubmitting(false);
+      isSubmitted.current = false;
+    }
+  }, [gameState.validatedWords, calculateReward, isValidWord, logGameEvent]);
+
+  const handleCompletePractice = async () => {
+    try {
+      // Update tutorial completion status in backend
       await fetch(`${import.meta.env.VITE_API_URL}/api/tutorial/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -297,26 +345,16 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         }),
       });
 
-      // Only call onComplete if everything succeeded
+      // Proceed to next phase
       onComplete();
     } catch (error) {
-      console.error("Tutorial submission error:", error);
+      console.error("Error completing tutorial:", error);
       setNotification({
-        message: "Failed to submit tutorial results. Please try again.",
+        message: "Failed to complete practice round. Please try again.",
         isError: true,
       });
-      // Reset submission states on error
-      setIsSubmitting(false);
-      isSubmitted.current = false;
     }
-  }, [
-    gameState.validatedWords,
-    sessionId,
-    prolificId,
-    logGameEvent,
-    onComplete,
-    setNotification,
-  ]);
+  };
 
   useEffect(() => {
     if (!showOverview && gameState.timeLeft > 0) {
@@ -359,6 +397,107 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
       <div className="text-center p-6">
         <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
         <p className="text-red-600 mb-4">{error}</p>
+      </div>
+    );
+  }
+
+  if (showResults && submissionResults) {
+    const { validWords, invalidWords, totalReward } = submissionResults;
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Practice Round Results
+          </h2>
+
+          <div className="space-y-6">
+            {/* Valid Words Section */}
+            <div>
+              <h3 className="font-semibold mb-3">Valid Words Created:</h3>
+              <div className="flex flex-wrap gap-2">
+                {validWords.length > 0 ? (
+                  validWords.map((word, idx) => (
+                    <span
+                      key={`valid-${word.word}-${idx}`}
+                      className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      {word.word} ({word.length} letters - {word.reward}p)
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500">No valid words created</span>
+                )}
+              </div>
+            </div>
+
+            {/* Invalid Words Section */}
+            {invalidWords?.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Invalid Attempts:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {invalidWords.map((word, idx) => (
+                    <span
+                      key={`invalid-${word.word}-${idx}`}
+                      className="inline-flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      {word.word} ({word.length} letters)
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Summary Stats */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-6">
+              <h3 className="font-semibold text-blue-800 mb-3">Summary</h3>
+              <div className="space-y-2 text-gray-700">
+                <p>Total valid words: {validWords.length}</p>
+                {invalidWords?.length > 0 && (
+                  <p>Invalid attempts: {invalidWords.length}</p>
+                )}
+                <p className="text-xl font-bold mt-4">
+                  Practice round reward: {Math.min(totalReward, 40)}p
+                </p>
+                {/* Conditional message if the reward exceeds 120p */}
+                {totalReward > 40 && (
+                  <p className="text-sm font-medium text-blue-700 mt-2">
+                    Maximum of 40p is assigned per word solving
+                  </p>
+                )}
+              </div>
+
+              {/* Motivation Message */}
+              <div className="mt-6 p-4 bg-white rounded-lg">
+                <p className="text-green-800 ">
+                  {totalReward > 0 ? (
+                    <>
+                      Great job! You are doing well with word creation. Keep
+                      this up in the main game!
+                      <br />
+                      <br />
+                      <span className=" text-red-500">
+                        This reward is for display only. Rewards will be
+                        distributed based on the main game performance.
+                      </span>
+                    </>
+                  ) : (
+                    "Great job! You're doing well with word creation. This was just a practice."
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCompletePractice}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+            >
+              Complete Practice Round
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -415,14 +554,27 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
                 <div className="space-y-1">
                   {Object.entries(studyConfig.rewards)
                     .sort(([a], [b]) => Number(b) - Number(a))
-                    .map(([length, reward]) => (
-                      <div key={length} className="flex items-center">
-                        <CoinIcon className="h-4 w-4 text-amber-600 mr-2" />
-                        <span className="text-gray-600 text-sm">
-                          {reward}p for {length}-letter words
-                        </span>
-                      </div>
-                    ))}
+                    .map(([length, reward], index) => {
+                      // Define an array of colors for each reward category
+                      const colors = [
+                        "text-amber-800",
+                        "text-amber-700",
+                        "text-amber-600",
+                        "text-amber-500",
+                      ];
+                      // Assign a color based on the index, defaulting to the last color if the index exceeds the array length
+                      const colorClass =
+                        colors[index] || colors[colors.length - 1];
+
+                      return (
+                        <div key={length} className="flex items-center">
+                          <CoinIcon className={`h-4 w-4 ${colorClass} mr-2`} />
+                          <span className="text-gray-600 text-sm">
+                            {reward}p for {length}-letter words
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             </div>

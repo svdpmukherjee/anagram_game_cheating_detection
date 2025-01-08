@@ -7,12 +7,15 @@ import SurveyPage from "./components/SurveyPage";
 import DebriefPage from "./components/DebriefPage";
 import ThankYouPage from "./components/ThankYouPage";
 import WordMeaningCheck from "./components/AnagramGame/WordMeaningCheck";
+import Container from "./components/Container";
 
 const STEPS = {
   LANDING: {
     id: "landing",
     progress: 0,
-    title: "Welcome to the Anagram Study",
+    title: "Welcome to the Study",
+    subtitle:
+      "Create Valid English words from scrambled letters. Longer words earn higher rewards!",
   },
   PROLIFIC_ID: {
     id: "prolific_id",
@@ -25,9 +28,9 @@ const STEPS = {
     id: "main_game",
     progress: 50,
     step: 3,
-    title: "Anagram Challenge",
+    title: "Main Game",
   },
-  SURVEY: { id: "survey", progress: 70, step: 4, title: "Quick Survey" },
+  SURVEY: { id: "survey", progress: 70, step: 4, title: "Your Feedback" },
   WORD_MEANING: {
     id: "word_meaning",
     progress: 85,
@@ -35,7 +38,12 @@ const STEPS = {
     title: "Word Meanings",
   },
   DEBRIEF: { id: "debrief", progress: 90, step: 6, title: "Study Debrief" },
-  THANK_YOU: { id: "thank_you", progress: 100, step: 7, title: "Thank You" },
+  THANK_YOU: {
+    id: "thank_you",
+    progress: 100,
+    step: 7,
+    title: "Thank You for Participating",
+  },
 };
 
 function App() {
@@ -242,12 +250,14 @@ function App() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {currentStep !== STEPS.LANDING.id && (
+      <div className="mx-auto ">
+        <Container>
+          {/* {currentStep !== STEPS.LANDING.id && ( */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
               {currentStepInfo.title}
             </h1>
+            <p className="text-lg text-gray-700">{currentStepInfo.subtitle}</p>
             {currentStepInfo.step && (
               <div className="flex items-center justify-center gap-2">
                 <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
@@ -257,9 +267,10 @@ function App() {
               </div>
             )}
           </div>
-        )}
+          {/* )} */}
 
-        {renderPage()}
+          {renderPage()}
+        </Container>
       </div>
     </div>
   );

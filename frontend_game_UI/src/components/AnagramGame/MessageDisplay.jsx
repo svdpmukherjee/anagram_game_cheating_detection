@@ -1,13 +1,36 @@
 import { useState, useEffect } from "react";
-import { Info, ArrowRight } from "lucide-react";
+import { Info, ArrowRight, AlertTriangle } from "lucide-react";
 
 const MessageDisplay = ({ message, onMessageShown }) => {
   const [isReady, setIsReady] = useState(false);
   const [hasRead, setHasRead] = useState(false);
-  const [remainingTime, setRemainingTime] = useState(5);
-  const minReadTime = 5000; // Minimum time to show message (5 seconds)
+  const [remainingTime, setRemainingTime] = useState(10);
+  const [studyConfig, setStudyConfig] = useState(null);
+  const [error, setError] = useState(null);
+  const minReadTime = 10000; // Minimum time to show message (10 seconds)
 
-  // Effect for the countdown timer
+  // Fetch study configuration
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/study-config`
+        );
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch study config: ${response.statusText}`
+          );
+        }
+        const data = await response.json();
+        setStudyConfig(data);
+      } catch (error) {
+        console.error("Error fetching study config:", error);
+        setError(error.message);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   // Effect for the countdown timer
   useEffect(() => {
     if (message?.id && !isReady) {
@@ -35,6 +58,23 @@ const MessageDisplay = ({ message, onMessageShown }) => {
 
   if (!message?.text) return null;
 
+  // Show error state if config fetch fails
+  if (error) {
+    return (
+      <div className="text-center p-4 space-y-2">
+        <AlertTriangle className="h-6 w-6 text-red-500 mx-auto" />
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  // Wait for config to load
+  if (!studyConfig) {
+    return null;
+  }
+
+  const gameTime = studyConfig.timeSettings.game_time / 60; // Convert to minutes
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -45,12 +85,18 @@ const MessageDisplay = ({ message, onMessageShown }) => {
               <p className="text-lg text-blue-800 leading-relaxed font-medium">
                 {message.text}
               </p>
-              {/* <p className="text-sm text-blue-600">
-                Please read this message carefully before proceeding
-              </p> */}
             </div>
           </div>
         </div>
+        {isReady && (
+          <div className="mt-4 p-4 rounded-lg border border-blue-200">
+            <p className="text-blue-900 font-medium">Next Steps:</p>
+            <p className="text-blue-800 mt-2">
+              You will now solve {studyConfig.game_anagrams} similar word
+              puzzles with {gameTime} minutes for each
+            </p>
+          </div>
+        )}
 
         <button
           onClick={() => setHasRead(true)}
@@ -67,7 +113,7 @@ const MessageDisplay = ({ message, onMessageShown }) => {
         >
           {isReady ? (
             <>
-              I understand, continue <ArrowRight className="w-5 h-5" />
+              I understand, Continue <ArrowRight className="w-5 h-5" />
             </>
           ) : (
             `Please wait ${remainingTime} seconds...`
