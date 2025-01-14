@@ -285,11 +285,18 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
       setIsSubmitting(true);
       isSubmitted.current = true;
 
-      if (mouseInactivityTimer.current) {
-        clearTimeout(mouseInactivityTimer.current);
+      // Only show confirmation dialog for manual submissions (not time-up)
+      if (!gameState.isTimeUp) {
+        const confirmed = window.confirm(
+          "Are you done with practice? You will now proceed to the main game"
+        );
+        if (!confirmed) {
+          setIsSubmitting(false);
+          isSubmitted.current = false;
+          return;
+        }
       }
-
-      // Calculate rewards and check validity for each word
+      // Rest of the submission logic remains the same
       const processedWords = gameState.validatedWords.map((word) => ({
         word: word.word,
         length: word.length,
@@ -297,7 +304,6 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         isValid: isValidWord(word.word),
       }));
 
-      // Calculate total reward and separate valid/invalid words
       const validWords = processedWords.filter((word) => word.isValid);
       const invalidWords = processedWords.filter((word) => !word.isValid);
       const totalReward = validWords.reduce(
@@ -305,19 +311,17 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         0
       );
 
-      // Set submission results
       setSubmissionResults({
         validWords,
         invalidWords,
         totalReward,
       });
 
-      // Log the submission event
       await logGameEvent("word_submission", {
         words: processedWords,
+        isTimeUp: gameState.isTimeUp,
       });
 
-      // Show results section
       setShowResults(true);
     } catch (error) {
       console.error("Tutorial submission error:", error);
@@ -325,11 +329,21 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         message: "Failed to submit tutorial results. Please try again.",
         isError: true,
       });
-      // Reset submission states on error
       setIsSubmitting(false);
       isSubmitted.current = false;
     }
-  }, [gameState.validatedWords, calculateReward, isValidWord, logGameEvent]);
+  }, [
+    gameState.validatedWords,
+    gameState.isTimeUp,
+    calculateReward,
+    isValidWord,
+    logGameEvent,
+  ]);
+
+  const handleTimeUp = useCallback(() => {
+    alert("Time's up! Let's review your practice round results.");
+    handleSubmit();
+  }, [handleSubmit]);
 
   const handleCompletePractice = async () => {
     try {
@@ -357,13 +371,12 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   };
 
   useEffect(() => {
-    if (!showOverview && gameState.timeLeft > 0) {
+    if (!showOverview && gameState.timeLeft > 0 && !isSubmitted.current) {
       timerRef.current = setInterval(() => {
         setGameState((prev) => {
-          if (prev.timeLeft <= 1 && !isSubmitted.current) {
+          if (prev.timeLeft <= 1) {
             clearInterval(timerRef.current);
-            isSubmitted.current = true;
-            handleSubmit();
+            handleTimeUp(); // Call separate timeUp handler
             return { ...prev, timeLeft: 0, isTimeUp: true };
           }
           return { ...prev, timeLeft: prev.timeLeft - 1 };
@@ -376,7 +389,15 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         }
       };
     }
-  }, [gameState.timeLeft, showOverview, handleSubmit]);
+  }, [gameState.timeLeft, showOverview]);
+
+  // Separate effect to handle time-up
+  useEffect(() => {
+    if (gameState.isTimeUp && !isSubmitted.current) {
+      isSubmitted.current = true;
+      handleSubmit();
+    }
+  }, [gameState.isTimeUp, handleSubmit]);
 
   useEffect(() => {
     if (sessionId) {

@@ -64,16 +64,16 @@ const GameBoard = ({
 
   // Submit confirmation handler
   const handleSubmitConfirm = useCallback(() => {
-    if (
-      isTutorial &&
-      !window.confirm(
-        "Are you done with practice? You will now proceed to the main game"
-      )
-    ) {
-      return;
-    }
+    // if (
+    //   isTutorial &&
+    //   !window.confirm(
+    //     "Are you done with practice? You will now proceed to the main game"
+    //   )
+    // ) {
+    //   return;
+    // }
     onSubmit();
-  }, [isTutorial, onSubmit]);
+  }, [onSubmit]);
 
   // Memo-ize validation button disabled state
   const isValidateDisabled = solution.length < 5 || (isTimeUp && !isTutorial);

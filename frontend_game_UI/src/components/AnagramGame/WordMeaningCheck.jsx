@@ -144,7 +144,7 @@ const WordMeaningCheck = ({
     inactivityCheckInterval.current = setInterval(() => {
       if (!isPageActive || isSubmitted.current) return;
       const timeSinceLastActivity = Date.now() - lastUserActivity.current;
-      if (!isInactive.current && timeSinceLastActivity > 10000) {
+      if (!isInactive.current && timeSinceLastActivity > 5000) {
         logEvent("mouse_inactive_start");
         isInactive.current = true;
       }
