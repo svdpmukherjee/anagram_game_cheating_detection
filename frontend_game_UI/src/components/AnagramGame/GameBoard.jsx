@@ -17,6 +17,7 @@ const GameBoard = ({
   onRemoveWord,
   validatedWords,
   isTutorial = false,
+  customSubmitDisabled,
 }) => {
   // Memoize handlers
   const handleDragStart = useCallback((e, letter, index, source) => {
@@ -77,8 +78,12 @@ const GameBoard = ({
 
   // Memo-ize validation button disabled state
   const isValidateDisabled = solution.length < 5 || (isTimeUp && !isTutorial);
+  // const isSubmitDisabled =
+  //   validatedWords.length === 0 || (isTimeUp && !isTutorial);
   const isSubmitDisabled =
-    validatedWords.length === 0 || (isTimeUp && !isTutorial);
+    validatedWords.length === 0 ||
+    (isTimeUp && !isTutorial) ||
+    (isTutorial && timeLeft > 60);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -148,24 +153,39 @@ const GameBoard = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 pt-4">
-        <ActionButton
-          onClick={onValidate}
-          disabled={isValidateDisabled}
-          icon={<Check className="w-5 h-5" />}
-          variant="green"
-        >
-          Validate Word
-        </ActionButton>
+      <div className="space-y-2">
+        <div className="flex gap-4">
+          <ActionButton
+            onClick={onValidate}
+            disabled={isValidateDisabled}
+            icon={<Check className="w-5 h-5" />}
+            variant="green"
+          >
+            Validate Word
+          </ActionButton>
 
-        <ActionButton
-          onClick={handleSubmitConfirm}
-          disabled={isSubmitDisabled}
-          icon={<Send className="w-5 h-5" />}
-          variant="blue"
-        >
-          {isTutorial ? "Complete Practice" : "Submit Words"}
-        </ActionButton>
+          <ActionButton
+            onClick={handleSubmitConfirm}
+            disabled={isSubmitDisabled}
+            icon={<Send className="w-5 h-5" />}
+            variant="blue"
+          >
+            {isTutorial ? "Complete Practice" : "Submit Words"}
+          </ActionButton>
+        </div>
+
+        {/* Error message below buttons */}
+        {isSubmitDisabled && isTutorial && (
+          <p className="text-sm text-gray-500 text-center">
+            {validatedWords.length === 0
+              ? "Validate at least one word"
+              : timeLeft > 60
+              ? `Please wait ${Math.ceil(
+                  timeLeft - 60
+                )} seconds to enable this button`
+              : ""}
+          </p>
+        )}
       </div>
     </div>
   );

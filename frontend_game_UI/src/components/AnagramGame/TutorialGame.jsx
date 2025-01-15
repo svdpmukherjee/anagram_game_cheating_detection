@@ -288,7 +288,7 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
       // Only show confirmation dialog for manual submissions (not time-up)
       if (!gameState.isTimeUp) {
         const confirmed = window.confirm(
-          "Are you done with practice? You will now proceed to the main game"
+          "Let's review your practice round results. You will then proceed to the main game"
         );
         if (!confirmed) {
           setIsSubmitting(false);
@@ -341,7 +341,7 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   ]);
 
   const handleTimeUp = useCallback(() => {
-    alert("Time's up! Let's review your practice round results.");
+    alert("Time's up!");
     handleSubmit();
   }, [handleSubmit]);
 

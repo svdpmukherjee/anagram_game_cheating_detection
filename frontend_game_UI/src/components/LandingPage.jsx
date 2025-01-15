@@ -68,7 +68,7 @@ const LandingPage = ({ onStartStudy }) => {
 
   const totalTime =
     studyConfig.timeSettings.tutorial_time +
-    studyConfig.timeSettings.game_time * 3 +
+    studyConfig.timeSettings.game_time * studyConfig.game_anagrams +
     studyConfig.timeSettings.survey_time;
 
   return (
