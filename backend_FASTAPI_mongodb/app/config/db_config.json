@@ -1,53 +1,108 @@
 {
   "anti_cheating_messages": [
     {
-      "id": 1,
-      "text": "The solutions you submit directly reflect your academic integrity and personal excellence. Your honest effort demonstrates who you truly are as a participant.",
+      "id": "C1",
+      "theory": "Self-Determination Theory",
+      "variation": "control",
+      "text": "Enjoy the challenge of solving these anagrams on your own and show your true skill!",
       "shown_count": 0
     },
     {
-      "id": 2,
-      "text": "Every word submission is recorded and analyzed in detail as part of our research integrity protocols. Your responses create a unique digital fingerprint of your participation.",
+      "id": "V1",
+      "theory": "Self-Determination Theory",
+      "variation": "value",
+      "text": "Enjoy the challenge of solving these anagrams on your own and show your true skill! Your autonomous choices and genuine effort reflect your personal integrity and contribute to meaningful research.",
       "shown_count": 0
     },
     {
-      "id": 3,
-      "text": "Our research shows that 90% of participants at top universities choose to solve these puzzles independently, taking pride in their original solutions. Be part of this community of academic excellence.",
+      "id": "F1",
+      "theory": "Self-Determination Theory",
+      "variation": "fear",
+      "text": "Enjoy the challenge of solving these anagrams on your own and show your true skill! Remember that using external help undermines the study's validity and may affect your rewards.",
       "shown_count": 0
     },
     {
-      "id": 4,
-      "text": "You possess the skills needed to excel at this task - your vocabulary, pattern recognition, and problem-solving abilities are more than sufficient. Trust in your capabilities to find creative solutions.",
+      "id": "C2",
+      "theory": "Achievement Motivation Theory",
+      "variation": "control",
+      "text": "Set your sights on creating the longest words to reach the top of the leaderboard!",
       "shown_count": 0
     },
     {
-      "id": 5,
-      "text": "Your honest participation directly impacts the validity of research that helps advance education and learning. When you maintain integrity, you support thousands of future students and researchers.",
+      "id": "V2",
+      "theory": "Achievement Motivation Theory",
+      "variation": "value",
+      "text": "Set your sights on creating the longest words to reach the top of the leaderboard! Your honest achievements showcase your true capabilities and commitment to excellence.",
       "shown_count": 0
     },
     {
-      "id": 6,
-      "text": "Independent problem-solving strengthens critical thinking and cognitive flexibility - skills valued by top employers. Each word you discover honestly develops these professional capabilities.",
+      "id": "F2",
+      "theory": "Achievement Motivation Theory",
+      "variation": "fear",
+      "text": "Set your sights on creating the longest words to reach the top of the leaderboard! Remember that using external help undermines the study's validity and may affect your rewards.",
       "shown_count": 0
     },
     {
-      "id": 7,
-      "text": "This task requires your complete concentration. Close other tabs, eliminate distractions, and immerse yourself fully in finding words within these letters.",
+      "id": "C3",
+      "theory": "Goal-Setting Theory",
+      "variation": "control",
+      "text": "Can you create 10 words with 5 or more letters in the next 5 minutes?",
       "shown_count": 0
     },
     {
-      "id": 8,
-      "text": "This is more than a word game - it's an opportunity to demonstrate your academic integrity and intellectual capabilities. Show your true scholarly character through honest effort.",
+      "id": "V3",
+      "theory": "Goal-Setting Theory",
+      "variation": "value",
+      "text": "Can you create 10 words with 5 or more letters in the next 5 minutes? Your genuine effort in reaching these goals demonstrates your dedication to personal achievement.",
       "shown_count": 0
     },
     {
-      "id": 9,
-      "text": "Every participant faces identical letters, time limits, and rules. Your commitment to finding words independently ensures equal opportunity and maintains scientific integrity for all.",
+      "id": "F3",
+      "theory": "Goal-Setting Theory",
+      "variation": "fear",
+      "text": "Can you create 10 words with 5 or more letters in the next 5 minutes? Remember that using external help undermines the study's validity and may affect your rewards.",
       "shown_count": 0
     },
     {
-      "id": 10,
-      "text": "Your approach to this task reflects your broader academic values and professional ethics. Make choices that align with your long-term goals of success through honest achievement.",
+      "id": "C4",
+      "theory": "Self-Efficacy Theory",
+      "variation": "control",
+      "text": "You have the skills to master this game—let's see how far your creativity can take you!",
+      "shown_count": 0
+    },
+    {
+      "id": "V4",
+      "theory": "Self-Efficacy Theory",
+      "variation": "value",
+      "text": "You have the skills to master this game—let's see how far your creativity can take you! Trust in your abilities and take pride in discovering words through your own effort.",
+      "shown_count": 0
+    },
+    {
+      "id": "F4",
+      "theory": "Self-Efficacy Theory",
+      "variation": "fear",
+      "text": "You have the skills to master this game—let's see how far your creativity can take you! Remember that using external help undermines the study's validity and may affect your rewards.",
+      "shown_count": 0
+    },
+    {
+      "id": "C5",
+      "theory": "Growth Mindset Theory",
+      "variation": "control",
+      "text": "Every word you create is a step toward improving your skills—keep going!",
+      "shown_count": 0
+    },
+    {
+      "id": "V5",
+      "theory": "Growth Mindset Theory",
+      "variation": "value",
+      "text": "Every word you create is a step toward improving your skills—keep going! Embrace this opportunity to develop your abilities through honest practice and determination.",
+      "shown_count": 0
+    },
+    {
+      "id": "F5",
+      "theory": "Growth Mindset Theory",
+      "variation": "fear",
+      "text": "Every word you create is a step toward improving your skills—keep going! Remember that using external help undermines the study's validity and may affect your rewards.",
       "shown_count": 0
     }
   ],
@@ -392,7 +447,7 @@
       "survey_time": 300
     },
     "study_compensation": {
-      "prolific_rate": "£1.80",
+      "prolific_rate": "£1.50",
       "max_reward_per_anagram": 40
     }
   }

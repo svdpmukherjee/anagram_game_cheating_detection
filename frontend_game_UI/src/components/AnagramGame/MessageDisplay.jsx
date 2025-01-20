@@ -7,10 +7,9 @@ const MessageDisplay = ({ message, onMessageShown }) => {
   const [remainingTime, setRemainingTime] = useState(10);
   const [studyConfig, setStudyConfig] = useState(null);
   const [error, setError] = useState(null);
-  const minReadTime = 10000; // Minimum time to show message (10 seconds)
+  const minReadTime = 10000;
   const messageStartTime = useRef(new Date());
 
-  // Fetch study configuration
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -32,7 +31,6 @@ const MessageDisplay = ({ message, onMessageShown }) => {
     fetchConfig();
   }, []);
 
-  // Effect for the countdown timer
   useEffect(() => {
     if (message?.id && !isReady) {
       const timer = setTimeout(() => {
@@ -55,18 +53,20 @@ const MessageDisplay = ({ message, onMessageShown }) => {
     if (hasRead && message?.id) {
       const timeSpent = Math.round(
         (new Date() - messageStartTime.current) / 1000
-      ); // Convert to seconds
+      );
+      // Ensure we pass the complete message object with all properties
       onMessageShown?.({
         messageId: message.id,
-        timeSpent: timeSpent,
         messageText: message.text,
+        timeSpentOnMessage: timeSpent,
+        theory: message.theory,
+        variation: message.variation,
       });
     }
   }, [hasRead, message, onMessageShown]);
 
   if (!message?.text) return null;
 
-  // Show error state if config fetch fails
   if (error) {
     return (
       <div className="text-center p-4 space-y-2">
@@ -76,30 +76,40 @@ const MessageDisplay = ({ message, onMessageShown }) => {
     );
   }
 
-  // Wait for config to load
-  if (!studyConfig) {
-    return null;
-  }
+  if (!studyConfig) return null;
 
-  const gameTime = studyConfig.timeSettings.game_time / 60; // Convert to minutes
+  const gameTime = studyConfig.timeSettings.game_time / 60;
+
+  // Split message text into main message and variation text
+  const [mainMessage, variationText] = message.text
+    .split("!")
+    .map((text) => text.trim());
 
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <div className="bg-blue-50 p-6 rounded-lg">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-50 p-6 rounded-lg">
           <div className="flex items-start gap-4">
-            <Info className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+            <Info className="h-7 w-7 text-blue-600 flex-shrink-0 mt-1" />
             <div className="space-y-4">
-              <p className="text-lg text-blue-800 leading-relaxed font-medium">
-                {message.text}
+              {/* Main message with larger font and primary color */}
+              <p className="text-2xl font-semibold text-blue-900 leading-relaxed">
+                {mainMessage}!
               </p>
+              {/* Variation text with different styling */}
+              {variationText && (
+                <p className="text-xl  leading-relaxed mt-2 border-t border-blue-200 pt-4">
+                  {variationText}
+                </p>
+              )}
             </div>
           </div>
         </div>
+
         {isReady && (
-          <div className="mt-4 p-4 rounded-lg border border-blue-200">
-            <p className="text-blue-900 font-medium">Next Steps:</p>
-            <p className="text-blue-800 mt-2">
+          <div className="mt-10 p-4 rounded-lg border border-gray-200 bg-gray-50">
+            <p className="text-gray-900 font-medium">Next Steps:</p>
+            <p className="text-gray-800 mt-2">
               You will now solve {studyConfig.game_anagrams} similar word
               puzzles with {gameTime} minutes for each
             </p>

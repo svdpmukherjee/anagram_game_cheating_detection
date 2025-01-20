@@ -412,7 +412,9 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
     await logGameEvent("anti_cheating_message_shown", {
       messageId: messageData.messageId,
       messageText: messageData.messageText,
-      timeSpentOnMessage: messageData.timeSpent,
+      timeSpentOnMessage: messageData.timeSpentOnMessage,
+      theory: messageData.theory,
+      variation: messageData.variation,
     });
     setGameState((prev) => ({ ...prev, phase: "play" }));
   };

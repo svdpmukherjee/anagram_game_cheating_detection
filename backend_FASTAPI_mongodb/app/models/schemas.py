@@ -44,10 +44,11 @@ class GameEventDetails(BaseModel):
     timeSinceLastAction: Optional[int] = None
     timeElapsed: Optional[int] = None
     wordCount: Optional[int] = None
-    messageId: Optional[int] = None
+    messageId: Optional[str] = None
     messageText: Optional[str] = None
     timeSpentOnMessage: Optional[int] = None
-    timeSpentOnMessage: Optional[int] = None
+    theory: Optional[str] = None
+    variation: Optional[str] = None
     words: Optional[List[ValidWord]] = None
     reason: Optional[str] = None
     timeInList: Optional[int] = None
@@ -64,7 +65,7 @@ class GameEvent(BaseModel):
     sessionId: str
     prolificId: str
     phase: str
-    currentTheoryId: Optional[int] = None
+    currentMessageId: Optional[int] = None
     anagramShown: Optional[str] = None
     eventType: str
     details: Optional[GameEventDetails] = None
@@ -106,7 +107,7 @@ class WordMeaningSubmission(BaseModel):
     totalTimeSpent: Optional[int] = None
     
 class GameInit(BaseModel):
-    currentTheory: Optional[AntiCheatingMessage]
+    currentMessage: Optional[AntiCheatingMessage]
     word: str
     solutions: Dict[str, List[str]]
     timeSettings: Dict[str, int]

@@ -163,6 +163,28 @@ async def log_game_event(event: GameEvent):
             if "timeSpent" in event_dict["details"]:
                 del event_dict["details"]["timeSpent"]
                 
+        if event.eventType == "anti_cheating_message_shown":
+            # Convert details to dict if it's not already
+            if not isinstance(event.details, dict):
+                details = event.details.dict(exclude_none=True)
+            else:
+                details = event.details
+                
+            # Clean up the details to only include relevant fields
+            message_details = {
+                "messageId": details.get("messageId"),
+                "messageText": details.get("messageText"),
+                "timeSpentOnMessage": details.get("timeSpentOnMessage"),
+                "theory": details.get("theory"),
+                "variation": details.get("variation")
+            }
+            
+            # Remove None values
+            message_details = {k: v for k, v in message_details.items() if v is not None}
+            
+            # Update event details
+            event_dict["details"] = message_details
+                
         # Handling for meaning submission events
         if event.eventType == "meaning_submission":
             if not event.details or not hasattr(event.details, "providedMeaning"):
@@ -314,7 +336,9 @@ async def initialize_game(sessionId: str):
         return {
             "currentMessage": {
                 "id": message["id"],
-                "text": message["text"]
+                "text": message["text"],
+                "theory": message["theory"],
+                "variation": message["variation"]
             },
             "word": first_anagram["word"],
             "solutions": first_anagram["solutions"],
