@@ -44,17 +44,21 @@ class GameEventDetails(BaseModel):
     timeSinceLastAction: Optional[int] = None
     timeElapsed: Optional[int] = None
     wordCount: Optional[int] = None
+    messageId: Optional[int] = None
+    messageText: Optional[str] = None
+    timeSpentOnMessage: Optional[int] = None
+    timeSpentOnMessage: Optional[int] = None
     words: Optional[List[ValidWord]] = None
     reason: Optional[str] = None
     timeInList: Optional[int] = None
-    theoryId: Optional[int] = None
     providedMeaning: Optional[str] = None
     anagram: Optional[str] = None
+    anagramShown: Optional[str] = None
     wordIndex: Optional[int] = None
     usedExternalResources: Optional[bool] = None
     wordsWithExternalHelp: Optional[List[WordWithAnagram]] = None
     totalWordsChecked: Optional[int] = None
-    responseTimestamp: Optional[datetime] = None
+    # responseTimestamp: Optional[datetime] = None
 
 class GameEvent(BaseModel):
     sessionId: str

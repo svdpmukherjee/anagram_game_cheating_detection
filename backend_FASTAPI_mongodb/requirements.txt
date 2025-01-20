@@ -3,8 +3,12 @@ uvicorn
 pydantic
 python-dotenv
 pymongo
-# pandas
-# matplotlib
-# seaborn
+pandas
+scipy
+matplotlib
+seaborn
 # notebook
 motor
+plotly
+statsmodels
+numpy

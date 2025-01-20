@@ -222,14 +222,24 @@ const DebriefPage = ({ sessionId, prolificId, onComplete }) => {
 
                 {/* Calculate the displayed reward */}
                 <p className="text-xl font-bold mt-4">
-                  Your earned reward: {Math.min(totalReward, 120)}p
+                  Your earned reward:{" "}
+                  {Math.min(
+                    totalReward,
+                    studyConfig.compensation.max_reward_per_anagram *
+                      studyConfig.game_anagrams
+                  )}
+                  p
                 </p>
 
-                {/* Conditional message if the reward exceeds 120p */}
-                {totalReward > 120 && (
+                {/* Conditional message if the reward exceeds (number of anagram * maximum reward per anagram) */}
+                {totalReward >
+                  studyConfig.compensation.max_reward_per_anagram *
+                    studyConfig.game_anagrams && (
                   <p className="text-sm font-medium text-blue-700 mt-2">
-                    Maximum of 120p was assigned, with up to 40p per word
-                    solving
+                    Maximum of{" "}
+                    {studyConfig.compensation.max_reward_per_anagram *
+                      studyConfig.game_anagrams}
+                    p was assigned, with up to 40p per word solving
                   </p>
                 )}
               </div>

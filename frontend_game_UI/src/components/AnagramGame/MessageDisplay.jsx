@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Info, ArrowRight, AlertTriangle } from "lucide-react";
 
 const MessageDisplay = ({ message, onMessageShown }) => {
@@ -8,6 +8,7 @@ const MessageDisplay = ({ message, onMessageShown }) => {
   const [studyConfig, setStudyConfig] = useState(null);
   const [error, setError] = useState(null);
   const minReadTime = 10000; // Minimum time to show message (10 seconds)
+  const messageStartTime = useRef(new Date());
 
   // Fetch study configuration
   useEffect(() => {
@@ -52,7 +53,14 @@ const MessageDisplay = ({ message, onMessageShown }) => {
 
   useEffect(() => {
     if (hasRead && message?.id) {
-      onMessageShown?.();
+      const timeSpent = Math.round(
+        (new Date() - messageStartTime.current) / 1000
+      ); // Convert to seconds
+      onMessageShown?.({
+        messageId: message.id,
+        timeSpent: timeSpent,
+        messageText: message.text,
+      });
     }
   }, [hasRead, message, onMessageShown]);
 

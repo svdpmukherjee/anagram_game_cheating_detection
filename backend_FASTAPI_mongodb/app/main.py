@@ -1,11 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 from bson import ObjectId
+from typing import List, Dict, Any
 import os
 from dotenv import load_dotenv
+
+# from app.middleware.dependency import get_rate_limiter, get_event_validator
+from app.models.schemas import GameEvent
 
 from app.models.schemas import (
     SessionInit, GameEvent, WordSubmission, 
@@ -19,8 +23,8 @@ app = FastAPI()
 # CORS middleware setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://anagram-game-solve-study.vercel.app"],
-    # allow_origins=["http://localhost:5173"],
+    # allow_origins=["https://anagram-game-solve-study.vercel.app"],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -149,12 +153,17 @@ async def complete_tutorial(request: dict):
 
 @app.post("/api/game-events")
 async def log_game_event(event: GameEvent):
-    """Log game events with enhanced meaning submission handling."""
+    """Log game events with meaning submission handling."""
     try:
         event_dict = event.dict(exclude_none=True)
         event_dict["timestamp"] = datetime.utcnow()
         
-        # Enhanced handling for meaning submission events
+        # Clean up details by removing timeSpent if present
+        if "details" in event_dict and isinstance(event_dict["details"], dict):
+            if "timeSpent" in event_dict["details"]:
+                del event_dict["details"]["timeSpent"]
+                
+        # Handling for meaning submission events
         if event.eventType == "meaning_submission":
             if not event.details or not hasattr(event.details, "providedMeaning"):
                 raise HTTPException(
@@ -162,12 +171,19 @@ async def log_game_event(event: GameEvent):
                     detail="Meaning submission requires providedMeaning"
                 )
             event_dict["details"]["providedMeaning"] = event.details.providedMeaning
+            
+        if not hasattr(event.details, "anagramShown"):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Meaning submission requires anagramShown"
+                )
         
         await app.database.game_events.insert_one(event_dict)
         return {"status": "success"}
     except Exception as e:
         print(f"Error logging game event: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/word-submissions")
 async def submit_words(submission: WordSubmission):
@@ -404,6 +420,14 @@ async def submit_word_meanings(request: dict):
                 status_code=400,
                 detail="Missing required fields"
             )
+            
+        # Ensure each word meaning has required fields
+        for meaning in word_meanings:
+            if not all(key in meaning for key in ["word", "providedMeaning", "anagramShown"]):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Each word meaning must include word, providedMeaning, and anagramShown"
+                )
 
         # Update session with word meanings
         update_result = await app.database.sessions.update_one(

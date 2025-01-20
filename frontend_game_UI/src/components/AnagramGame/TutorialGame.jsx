@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import CoinIcon from "../CoinIcon";
+import EventTrack from "../shared/EventTrack";
 
 const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   const [gameState, setGameState] = useState({
@@ -30,15 +31,8 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
   const [showResults, setShowResults] = useState(false);
   const [submissionResults, setSubmissionResults] = useState(null);
 
-  const startTime = useRef(new Date());
-  const lastActionTime = useRef(new Date());
   const timerRef = useRef(null);
-  const mouseInactivityTimer = useRef(null);
-  const isInactive = useRef(false);
   const isSubmitted = useRef(false);
-  const lastUserActivity = useRef(Date.now());
-  const inactivityCheckInterval = useRef(null);
-  const ignoreNextBlur = useRef(false);
 
   const showNotification = useCallback((message, isError = false) => {
     setNotification({ message, isError });
@@ -67,7 +61,6 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
             eventType,
             details: {
               ...details,
-              // Keep only the relevant details without timing information
             },
             timestamp: new Date().toISOString(),
           }),
@@ -79,89 +72,32 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
     [sessionId, prolificId, gameState.tutorialWord]
   );
 
-  useEffect(() => {
-    if (showOverview || isSubmitted.current) return;
+  // Handler for inactivity start
+  const handleInactiveStart = useCallback(() => {
+    if (!showOverview && !isSubmitted.current) {
+      logGameEvent("mouse_inactive_start");
+    }
+  }, [showOverview, logGameEvent]);
 
-    let isPageActive = true;
-    let currentFocus = true;
+  // Handler for returning to active state
+  const handleActiveReturn = useCallback(() => {
+    if (!showOverview && !isSubmitted.current) {
+      logGameEvent("mouse_active");
+    }
+  }, [showOverview, logGameEvent]);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        isPageActive = false;
-        isInactive.current = false;
-        logGameEvent("page_leave");
-      } else if (!isPageActive) {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logGameEvent("page_return");
-      }
-    };
+  // Handler for page visibility change - leave
+  const handlePageLeave = useCallback(() => {
+    if (!showOverview && !isSubmitted.current) {
+      logGameEvent("page_leave");
+    }
+  }, [showOverview, logGameEvent]);
 
-    const handleWindowBlur = () => {
-      if (ignoreNextBlur.current) {
-        ignoreNextBlur.current = false;
-        return;
-      }
-      currentFocus = false;
-      if (isPageActive) {
-        isPageActive = false;
-        isInactive.current = false;
-        logGameEvent("page_leave");
-      }
-    };
-
-    const handleWindowFocus = () => {
-      const wasFocused = currentFocus;
-      currentFocus = true;
-
-      if (!wasFocused && !document.hidden) {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logGameEvent("page_return");
-      }
-    };
-
-    const originalAlert = window.alert;
-    window.alert = function (message) {
-      ignoreNextBlur.current = true;
-      return originalAlert.call(window, message);
-    };
-
-    const handleUserActivity = () => {
-      if (!isPageActive || isSubmitted.current) return;
-      lastUserActivity.current = Date.now();
-      if (isInactive.current) {
-        logGameEvent("mouse_active");
-        isInactive.current = false;
-      }
-    };
-
-    inactivityCheckInterval.current = setInterval(() => {
-      if (!isPageActive || isSubmitted.current) return;
-      const timeSinceLastActivity = Date.now() - lastUserActivity.current;
-      if (!isInactive.current && timeSinceLastActivity > 5000) {
-        logGameEvent("mouse_inactive_start");
-        isInactive.current = true;
-      }
-    }, 1000);
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    document.addEventListener("mousemove", handleUserActivity);
-    document.addEventListener("keydown", handleUserActivity);
-    document.addEventListener("click", handleUserActivity);
-
-    return () => {
-      window.alert = originalAlert;
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      document.removeEventListener("mousemove", handleUserActivity);
-      document.removeEventListener("keydown", handleUserActivity);
-      document.removeEventListener("click", handleUserActivity);
-      clearInterval(inactivityCheckInterval.current);
-    };
+  // Handler for page visibility change - return
+  const handlePageReturn = useCallback(() => {
+    if (!showOverview && !isSubmitted.current) {
+      logGameEvent("page_return");
+    }
   }, [showOverview, logGameEvent]);
 
   const initTutorial = useCallback(async () => {
@@ -179,7 +115,6 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         configResponse.json(),
         tutorialResponse.json(),
       ]);
-      console.log("Tutorial Data:", tutorialData);
 
       if (!configResponse.ok || !tutorialResponse.ok) {
         throw new Error("Failed to initialize tutorial");
@@ -648,6 +583,14 @@ const TutorialGame = ({ prolificId, sessionId, onComplete }) => {
         isTimeUp={gameState.isTimeUp}
         validatedWords={gameState.validatedWords}
         isTutorial={true}
+      />
+      <EventTrack
+        onPageLeave={handlePageLeave}
+        onPageReturn={handlePageReturn}
+        onInactivityStart={handleInactiveStart}
+        onActiveReturn={handleActiveReturn}
+        enabled={!showOverview && !isSubmitted.current}
+        inactivityTimeout={5000}
       />
     </div>
   );

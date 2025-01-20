@@ -182,7 +182,14 @@ const GameBoard = ({
               : timeLeft > 60
               ? `Please wait ${Math.ceil(
                   timeLeft - 60
-                )} seconds to enable this button`
+                )} seconds to enable Complete Practice`
+              : ""}
+          </p>
+        )}
+        {isSubmitDisabled && !isTutorial && (
+          <p className="text-sm text-gray-500 text-center">
+            {validatedWords.length === 0
+              ? "Try to validate at least one word"
               : ""}
           </p>
         )}

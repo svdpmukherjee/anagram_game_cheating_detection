@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import MessageDisplay from "./MessageDisplay";
 import GameBoard from "./GameBoard";
+import EventTrack from "../shared/EventTrack";
 import { AlertTriangle } from "lucide-react";
 
 const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
@@ -23,17 +24,12 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOverview, setShowOverview] = useState(true);
 
   // Refs for tracking
   const startTime = useRef(new Date());
-  const lastActionTime = useRef(new Date());
   const timerRef = useRef(null);
-  const mouseInactivityTimer = useRef(null);
-  const isInactive = useRef(false);
   const isSubmitted = useRef(false);
-  const lastUserActivity = useRef(Date.now());
-  const inactivityCheckInterval = useRef(null);
-  const ignoreNextBlur = useRef(false);
 
   // Fetch study config on mount
   useEffect(() => {
@@ -87,12 +83,9 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
           eventType,
           details: {
             ...details,
-            // Add messageId only for anti-cheating message events
-            ...(eventType === "anti_cheating_message_shown"
-              ? {
-                  messageId: gameState.currentMessage?.id,
-                }
-              : {}),
+            currentWord: gameState.currentWord,
+            timeLeft: gameState.timeLeft,
+            validatedWordsCount: gameState.validatedWords.length,
           },
           timestamp: new Date().toISOString(),
         };
@@ -106,97 +99,55 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
         console.error("Event logging error:", error);
       }
     },
-    [sessionId, prolificId, gameState.currentWord, gameState.currentMessage?.id]
+    [
+      sessionId,
+      prolificId,
+      gameState.currentWord,
+      gameState.timeLeft,
+      gameState.validatedWords.length,
+    ]
   );
 
-  // Activity tracking setup
-  useEffect(() => {
-    if (gameState.phase !== "play" || isSubmitted.current) return;
+  const handleInactiveStart = useCallback(() => {
+    console.log("handleInactiveStart called in index.jsx"); // Add this log
+    if (!isSubmitted.current && gameState.phase === "play") {
+      console.log("Logging inactivity event"); // Add this log
+      logGameEvent("mouse_inactive_start");
+    } else {
+      console.log("Inactivity event skipped:", {
+        // Add this log
+        isSubmitted: isSubmitted.current,
+        phase: gameState.phase,
+      });
+    }
+  }, [logGameEvent, gameState.phase]);
 
-    let isPageActive = true;
-    let currentFocus = true;
+  const handleActiveReturn = useCallback(() => {
+    if (!isSubmitted.current && gameState.phase === "play") {
+      logGameEvent("mouse_active");
+    }
+  }, [logGameEvent, gameState.phase]);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        isPageActive = false;
-        isInactive.current = false;
-        logGameEvent("page_leave");
-      } else {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logGameEvent("page_return");
+  const handlePageLeave = useCallback(
+    ({ tabChangeCount, timestamp } = {}) => {
+      if (!isSubmitted.current) {
+        logGameEvent("page_leave", {
+          tabChangeCount,
+          timestamp,
+          currentWord: gameState.currentWord,
+        });
       }
-    };
+    },
+    [logGameEvent, gameState.currentWord]
+  );
 
-    const handleWindowBlur = () => {
-      if (ignoreNextBlur.current) {
-        ignoreNextBlur.current = false;
-        return;
-      }
-      currentFocus = false;
-      if (isPageActive) {
-        isPageActive = false;
-        isInactive.current = false;
-        logGameEvent("page_leave");
-      }
-    };
-
-    const handleWindowFocus = () => {
-      const wasFocused = currentFocus;
-      currentFocus = true;
-      if (!wasFocused && !document.hidden) {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logGameEvent("page_return");
-      }
-    };
-
-    const handleUserActivity = () => {
-      if (!isPageActive || isSubmitted.current) return;
-      lastUserActivity.current = Date.now();
-      if (isInactive.current) {
-        logGameEvent("mouse_active");
-        isInactive.current = false;
-      }
-    };
-
-    // Override alert to prevent blur event
-    const originalAlert = window.alert;
-    window.alert = function (message) {
-      ignoreNextBlur.current = true;
-      return originalAlert.call(window, message);
-    };
-
-    // Set up inactivity check
-    inactivityCheckInterval.current = setInterval(() => {
-      if (!isPageActive || isSubmitted.current || gameState.phase !== "play")
-        return;
-      const timeSinceLastActivity = Date.now() - lastUserActivity.current;
-      if (!isInactive.current && timeSinceLastActivity > 5000) {
-        logGameEvent("mouse_inactive_start");
-        isInactive.current = true;
-      }
-    }, 1000);
-
-    // Event listeners
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    document.addEventListener("mousemove", handleUserActivity);
-    document.addEventListener("keydown", handleUserActivity);
-    document.addEventListener("click", handleUserActivity);
-
-    return () => {
-      window.alert = originalAlert;
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      document.removeEventListener("mousemove", handleUserActivity);
-      document.removeEventListener("keydown", handleUserActivity);
-      document.removeEventListener("click", handleUserActivity);
-      clearInterval(inactivityCheckInterval.current);
-    };
-  }, [gameState.phase, logGameEvent]);
+  const handlePageReturn = useCallback(() => {
+    if (!isSubmitted.current) {
+      logGameEvent("page_return", {
+        currentWord: gameState.currentWord,
+      });
+    }
+  }, [logGameEvent, gameState.currentWord]);
 
   // Initialize game
   const initGame = useCallback(async () => {
@@ -252,34 +203,6 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       });
     }
   }, [sessionId, logGameEvent, gameState.phase]);
-
-  // Timer effect
-  useEffect(() => {
-    if (
-      gameState.phase === "play" &&
-      gameState.timeLeft > 0 &&
-      !isSubmitted.current
-    ) {
-      timerRef.current = setInterval(() => {
-        setGameState((prev) => {
-          if (prev.timeLeft <= 1) {
-            clearInterval(timerRef.current);
-            isSubmitted.current = true;
-            // Automatically submit when time is up
-            handleTimeUp();
-            return { ...prev, timeLeft: 0, isTimeUp: true };
-          }
-          return { ...prev, timeLeft: prev.timeLeft - 1 };
-        });
-      }, 1000);
-
-      return () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-    }
-  }, [gameState.phase, gameState.timeLeft]);
 
   const isValidWord = useCallback(
     (word) => {
@@ -357,7 +280,7 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
   );
 
   const handleSubmit = async () => {
-    if (isSubmitting || isSubmitted.current) return;
+    if (isSubmitting || (isSubmitted.current && !gameState.isTimeUp)) return;
 
     try {
       setIsSubmitting(true);
@@ -478,124 +401,49 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
     }
   };
 
-  const handleTimeUp = async () => {
-    if (isSubmitting) return;
+  const handleTimeUp = useCallback(async () => {
+    if (isSubmitting || isSubmitted.current) return;
 
-    try {
-      setIsSubmitting(true);
+    // alert("Time's up!");
+    handleSubmit();
+  }, [handleSubmit]);
 
-      const currentTimeSpent = Date.now() - startTime.current;
-
-      // Calculate rewards for validated words
-      const submittedWords = gameState.validatedWords.map((word) => ({
-        word: word.word,
-        length: word.length,
-        reward: calculateReward(word.length, isValidWord(word.word)),
-        isValid: isValidWord(word.word),
-        validatedAt: word.validatedAt,
-        submittedAt: new Date().toISOString(),
-      }));
-
-      const totalReward = submittedWords.reduce(
-        (sum, w) => sum + (w.reward || 0),
-        0
-      );
-
-      // Submit words
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/word-submissions`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            prolificId,
-            phase: "main_game",
-            anagramShown: gameState.currentWord,
-            submittedWords,
-            totalReward,
-            timeSpent: currentTimeSpent,
-            submittedAt: new Date().toISOString(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to submit words");
-      }
-
-      // Update all validated words
-      const allValidatedWords = [
-        ...gameState.allValidatedWords,
-        ...submittedWords,
-      ];
-      setGameState((prev) => ({
-        ...prev,
-        allValidatedWords,
-      }));
-
-      // Log submission
-      await logGameEvent("word_submission", {
-        wordCount: submittedWords.length,
-        words: submittedWords,
-        timeSpent: currentTimeSpent,
-        isTimeUp: true,
-      });
-
-      // Check if there are more anagrams
-      if (gameState.wordIndex < gameState.totalAnagrams - 1) {
-        // Fetch next anagram
-        const response = await fetch(
-          `${
-            import.meta.env.VITE_API_URL
-          }/api/game/next?sessionId=${sessionId}&currentIndex=${
-            gameState.wordIndex
-          }`
-        );
-        const data = await response.json();
-
-        if (!response.ok || !data.word || !data.solutions) {
-          throw new Error("Failed to fetch next anagram");
-        }
-
-        // Reset game state for next anagram
-        setGameState((prev) => ({
-          ...prev,
-          wordIndex: prev.wordIndex + 1,
-          currentWord: data.word,
-          solutions: data.solutions,
-          solution: [],
-          availableLetters: Array.from(data.word).sort(
-            () => Math.random() - 0.5
-          ),
-          validatedWords: [],
-          timeLeft: prev.totalTime,
-          isTimeUp: false,
-        }));
-
-        isSubmitted.current = false;
-        startTime.current = new Date();
-      } else {
-        // Complete the game
-        await logGameEvent("game_complete", {
-          totalWords: allValidatedWords.length,
-          finalAnagram: gameState.currentWord,
-        });
-
-        // Show completion alert before moving to next phase
-        alert("You have now completed all anagrams in the game.");
-        onComplete(allValidatedWords);
-      }
-    } catch (error) {
-      console.error("Submission error:", error);
-      showNotification("Failed to submit words. Please try again.", true);
-      setIsSubmitting(false);
-      isSubmitted.current = false;
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleMessageShown = async (messageData) => {
+    await logGameEvent("anti_cheating_message_shown", {
+      messageId: messageData.messageId,
+      messageText: messageData.messageText,
+      timeSpentOnMessage: messageData.timeSpent,
+    });
+    setGameState((prev) => ({ ...prev, phase: "play" }));
   };
+
+  // Timer effect
+  useEffect(() => {
+    if (
+      gameState.phase === "play" &&
+      gameState.timeLeft > 0 &&
+      !isSubmitted.current
+    ) {
+      timerRef.current = setInterval(() => {
+        setGameState((prev) => {
+          if (prev.timeLeft <= 1) {
+            clearInterval(timerRef.current);
+            // Set isTimeUp first
+            setGameState((prev) => ({ ...prev, timeLeft: 0, isTimeUp: true }));
+            handleTimeUp();
+            return { ...prev, timeLeft: 0, isTimeUp: true };
+          }
+          return { ...prev, timeLeft: prev.timeLeft - 1 };
+        });
+      }, 1000);
+
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
+    }
+  }, [gameState.phase, gameState.timeLeft, handleTimeUp]);
 
   // Initialize game on mount
   useEffect(() => {
@@ -641,14 +489,7 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
       {gameState.phase === "message" && (
         <MessageDisplay
           message={gameState.currentMessage}
-          onMessageShown={() => {
-            logGameEvent("anti_cheating_message_shown", {
-              messageId: gameState.currentMessage.id,
-              messageText: gameState.currentMessage.text,
-              timeShown: new Date().toISOString(),
-            });
-            setGameState((prev) => ({ ...prev, phase: "play" }));
-          }}
+          onMessageShown={handleMessageShown}
         />
       )}
 
@@ -675,6 +516,14 @@ const AnagramGame = ({ prolificId, sessionId, onComplete }) => {
           validatedWords={gameState.validatedWords}
         />
       )}
+      <EventTrack
+        onPageLeave={handlePageLeave}
+        onPageReturn={handlePageReturn}
+        onInactivityStart={handleInactiveStart}
+        onActiveReturn={handleActiveReturn}
+        enabled={!isSubmitted.current && gameState.phase === "play"}
+        inactivityTimeout={5000}
+      />
     </div>
   );
 };

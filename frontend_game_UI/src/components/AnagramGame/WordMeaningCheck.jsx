@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AlertTriangle, Info, ChevronRight } from "lucide-react";
+import EventTrack from "../shared/EventTrack";
 
 const WordMeaningCheck = ({
   validatedWords = [],
@@ -7,7 +8,6 @@ const WordMeaningCheck = ({
   prolificId,
   onComplete,
 }) => {
-  // State management
   const [currentIndex, setCurrentIndex] = useState(0);
   const [meanings, setMeanings] = useState({});
   const [uniqueWords, setUniqueWords] = useState([]);
@@ -15,58 +15,105 @@ const WordMeaningCheck = ({
   const [error, setError] = useState(null);
   const [showIntro, setShowIntro] = useState(true);
 
-  // Tracking refs
   const startTime = useRef(new Date());
-  const lastActionTime = useRef(new Date());
   const wordStartTime = useRef(new Date());
   const isSubmitted = useRef(false);
-  const lastUserActivity = useRef(Date.now());
-  const inactivityCheckInterval = useRef(null);
-  const isInactive = useRef(false);
-  const ignoreNextBlur = useRef(false);
 
-  // Initialize unique words
+  // First, fetch game results to get complete anagram information
   useEffect(() => {
-    try {
-      const uniqueWordsMap = new Map();
-      validatedWords.forEach((word) => {
-        if (!uniqueWordsMap.has(word.word)) {
-          uniqueWordsMap.set(word.word, word);
+    const fetchGameResults = async () => {
+      try {
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/game-results?sessionId=${sessionId}&prolificId=${prolificId}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch game results");
         }
-      });
-      const unique = Array.from(uniqueWordsMap.values());
-      setUniqueWords(unique);
-      setLoading(false);
+        const data = await response.json();
 
-      // Log meaning check start
-      logEvent("meaning_check_start", {
-        totalUniqueWords: unique.length,
-        words: unique.map((w) => w.word),
+        // Create a map of words to their anagrams
+        const wordAnagramMap = new Map();
+        data.anagramDetails.forEach((detail) => {
+          detail.words.forEach((word) => {
+            wordAnagramMap.set(word.word.toUpperCase(), detail.anagram);
+          });
+        });
+
+        // Create unique words with anagram information
+        const uniqueWordsMap = new Map();
+        validatedWords.forEach((word) => {
+          const upperWord = word.word.toUpperCase();
+          if (!uniqueWordsMap.has(upperWord)) {
+            uniqueWordsMap.set(upperWord, {
+              word: word.word,
+              length: word.length,
+              reward: word.reward,
+              anagramShown: wordAnagramMap.get(upperWord) || "",
+            });
+          }
+        });
+
+        const unique = Array.from(uniqueWordsMap.values());
+        setUniqueWords(unique);
+
+        if (unique.length === 0) {
+          handleNoWordsCompletion();
+        } else {
+          logEvent("meaning_check_start", {
+            totalUniqueWords: unique.length,
+            words: unique.map((w) => ({
+              word: w.word,
+              anagramShown: w.anagramShown,
+            })),
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching game results:", error);
+        setError("Failed to initialize word meanings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGameResults();
+  }, [sessionId, prolificId, validatedWords]);
+
+  const handleNoWordsCompletion = async () => {
+    try {
+      if (!sessionId || !prolificId) {
+        throw new Error("Missing session ID or Prolific ID");
+      }
+
+      await logEvent("meaning_check_complete", {
+        totalWords: 0,
+        reason: "no_validated_words",
       });
+
+      onComplete([]);
     } catch (error) {
-      console.error("Error initializing word meaning check:", error);
-      setError("Failed to initialize word meanings");
-      setLoading(false);
+      console.error("Error handling no words completion:", error);
+      setError("Failed to complete phase. Please try again.");
     }
-  }, [validatedWords]);
+  };
 
   const logEvent = useCallback(
     async (eventType, details = {}) => {
       if (!sessionId || !prolificId) return;
 
       try {
+        const currentWord = uniqueWords[currentIndex];
         const eventBody = {
           sessionId,
           prolificId,
           phase: "meaning_check",
           eventType,
           details: {
-            word: details.word || uniqueWords[currentIndex]?.word,
-            wordLength: details.wordLength || uniqueWords[currentIndex]?.length,
-            timeSpent: Date.now() - wordStartTime.current,
+            word: details.word || currentWord?.word,
             providedMeaning: details.providedMeaning,
-            anagram: details.anagram,
-            wordIndex: details.wordIndex,
+            anagramShown: details.anagramShown || currentWord?.anagramShown,
+            reason: details.reason,
           },
           timestamp: new Date().toISOString(),
         };
@@ -83,104 +130,57 @@ const WordMeaningCheck = ({
     [sessionId, prolificId, uniqueWords, currentIndex]
   );
 
-  // Activity tracking effect
-  useEffect(() => {
-    if (isSubmitted.current) return;
+  const handlePageLeave = useCallback(() => {
+    if (!isSubmitted.current) {
+      const currentWord = uniqueWords[currentIndex];
+      logEvent("page_leave", {
+        word: currentWord?.word,
+        anagramShown: currentWord?.anagramShown,
+      });
+    }
+  }, [logEvent, uniqueWords, currentIndex]);
 
-    let isPageActive = true;
-    let currentFocus = true;
+  const handlePageReturn = useCallback(() => {
+    if (!isSubmitted.current) {
+      const currentWord = uniqueWords[currentIndex];
+      logEvent("page_return", {
+        word: currentWord?.word,
+        anagramShown: currentWord?.anagramShown,
+      });
+    }
+  }, [logEvent, uniqueWords, currentIndex]);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        isPageActive = false;
-        isInactive.current = false;
-        logEvent("page_leave");
-      } else {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logEvent("page_return");
-      }
-    };
+  const handleInactiveStart = useCallback(() => {
+    console.log("handleInactiveStart called in WordMeaningCheck");
+    if (!isSubmitted.current) {
+      const currentWord = uniqueWords[currentIndex];
+      logEvent("mouse_inactive_start", {
+        word: currentWord?.word,
+        anagramShown: currentWord?.anagramShown,
+      });
+    }
+  }, [logEvent, uniqueWords, currentIndex]);
 
-    const handleWindowBlur = () => {
-      if (ignoreNextBlur.current) {
-        ignoreNextBlur.current = false;
-        return;
-      }
-      currentFocus = false;
-      if (isPageActive) {
-        isPageActive = false;
-        isInactive.current = false;
-        logEvent("page_leave");
-      }
-    };
-
-    const handleWindowFocus = () => {
-      const wasFocused = currentFocus;
-      currentFocus = true;
-      if (!wasFocused && !document.hidden) {
-        isPageActive = true;
-        lastUserActivity.current = Date.now();
-        logEvent("page_return");
-      }
-    };
-
-    const handleUserActivity = () => {
-      if (!isPageActive || isSubmitted.current) return;
-      lastUserActivity.current = Date.now();
-      if (isInactive.current) {
-        logEvent("mouse_active");
-        isInactive.current = false;
-      }
-    };
-
-    // Override alert to prevent blur event
-    const originalAlert = window.alert;
-    window.alert = function (message) {
-      ignoreNextBlur.current = true;
-      return originalAlert.call(window, message);
-    };
-
-    inactivityCheckInterval.current = setInterval(() => {
-      if (!isPageActive || isSubmitted.current) return;
-      const timeSinceLastActivity = Date.now() - lastUserActivity.current;
-      if (!isInactive.current && timeSinceLastActivity > 5000) {
-        logEvent("mouse_inactive_start");
-        isInactive.current = true;
-      }
-    }, 1000);
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    document.addEventListener("mousemove", handleUserActivity);
-    document.addEventListener("keydown", handleUserActivity);
-    document.addEventListener("click", handleUserActivity);
-
-    return () => {
-      window.alert = originalAlert;
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      document.removeEventListener("mousemove", handleUserActivity);
-      document.removeEventListener("keydown", handleUserActivity);
-      document.removeEventListener("click", handleUserActivity);
-      clearInterval(inactivityCheckInterval.current);
-    };
-  }, [logEvent]);
+  const handleActiveReturn = useCallback(() => {
+    console.log("activeStart called in WordMeaningCheck");
+    if (!isSubmitted.current) {
+      const currentWord = uniqueWords[currentIndex];
+      logEvent("mouse_active", {
+        word: currentWord?.word,
+        anagramShown: currentWord?.anagramShown,
+      });
+    }
+  }, [logEvent, uniqueWords, currentIndex]);
 
   const handleSubmit = async (meaning) => {
     const currentWord = uniqueWords[currentIndex];
     if (!currentWord) return;
 
-    const timeSpent = Date.now() - wordStartTime.current;
-
-    // Log meaning submission
+    // Log the meaning submission event
     await logEvent("meaning_submission", {
-      anagram: currentWord.anagram,
       word: currentWord.word,
+      anagramShown: currentWord.anagramShown,
       providedMeaning: meaning,
-      wordIndex: currentIndex,
     });
 
     // Update meanings state
@@ -189,43 +189,66 @@ const WordMeaningCheck = ({
       [currentWord.word]: meaning,
     }));
 
-    // Move to next word or complete
     if (currentIndex < uniqueWords.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       wordStartTime.current = new Date();
     } else {
-      // Complete meaning check
       try {
         isSubmitted.current = true;
+
+        // Prepare meaning data for submission
         const meaningData = uniqueWords.map((word) => ({
           word: word.word,
           providedMeaning: meanings[word.word] || meaning,
-          isCorrect: null, // Will be validated by backend
+          anagramShown: word.anagramShown,
+          submittedAt: new Date().toISOString(),
         }));
 
-        await fetch(`${import.meta.env.VITE_API_URL}/api/meanings/submit`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            prolificId,
-            phase: "meaning_check",
-            wordMeanings: meaningData,
-            completedAt: new Date().toISOString(),
-            totalTimeSpent: Date.now() - startTime.current,
-          }),
-        });
+        // Validate that all required fields are present
+        const missingFields = meaningData.filter(
+          (item) => !item.word || !item.providedMeaning || !item.anagramShown
+        );
+
+        if (missingFields.length > 0) {
+          console.error("Missing fields in words:", missingFields);
+          throw new Error("Missing required fields in word meanings");
+        }
+
+        // Submit meanings
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/meanings/submit`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              prolificId,
+              wordMeanings: meaningData,
+              completedAt: new Date().toISOString(),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to submit meanings");
+        }
 
         // Log completion
         await logEvent("meaning_check_complete", {
           totalWords: uniqueWords.length,
-          totalTimeSpent: Date.now() - startTime.current,
+          // words: meaningData.map(({ word, anagramShown }) => ({
+          //   word,
+          //   anagramShown,
+          // })),
         });
 
         onComplete(meaningData);
       } catch (error) {
         console.error("Failed to submit meanings:", error);
-        setError("Failed to submit meanings. Please try again.");
+        setError(
+          error.message || "Failed to submit meanings. Please try again."
+        );
         isSubmitted.current = false;
       }
     }
@@ -248,16 +271,36 @@ const WordMeaningCheck = ({
     );
   }
 
-  if (!uniqueWords.length) {
+  if (!loading && uniqueWords.length === 0) {
     return (
-      <div className="text-center p-6 bg-red-50 rounded-lg">
-        <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-        <p className="text-red-600">No words available for meaning check.</p>
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 bg-blue-50 p-6 rounded-lg">
+              <Info className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+              <div className="space-y-4">
+                <p className="text-blue-700">
+                  Thank you for participating in the word creation activity and
+                  completing the survey!
+                </p>
+                <p className="text-blue-700">
+                  Let's proceed to learn more about the study.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onComplete([])}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              Continue
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Show introduction screen
   if (showIntro) {
     return (
       <div className="space-y-6">
@@ -268,10 +311,7 @@ const WordMeaningCheck = ({
                 <h3 className="text-lg font-semibold text-blue-800">
                   Thank you for creating words and completing the survey!
                 </h3>
-                {/* <p className="text-blue-700">
-                  Thank you for word creation followed by completing the survey!{" "}
-                </p> */}
-                <div className="flex ">
+                <div className="flex">
                   <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-1" />
                   <p className="ml-2">
                     <span className="font-semibold text-amber-600">
@@ -301,13 +341,11 @@ const WordMeaningCheck = ({
     );
   }
 
-  // Show word meaning check interface
   const currentWord = uniqueWords[currentIndex];
 
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        {/* Progress Bar */}
         <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
           <span>
             Word {currentIndex + 1} of {uniqueWords.length}
@@ -322,14 +360,12 @@ const WordMeaningCheck = ({
           </div>
         </div>
 
-        {/* Word Display */}
         <div className="text-center mb-6">
           <h3 className="text-3xl font-bold text-blue-600">
             {currentWord.word}
           </h3>
         </div>
 
-        {/* Input Area */}
         <div className="space-y-4">
           <textarea
             className="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 
@@ -358,6 +394,15 @@ const WordMeaningCheck = ({
           </button>
         </div>
       </div>
+
+      <EventTrack
+        onPageLeave={handlePageLeave}
+        onPageReturn={handlePageReturn}
+        onInactivityStart={handleInactiveStart}
+        onActiveReturn={handleActiveReturn}
+        enabled={!isSubmitted.current}
+        inactivityTimeout={5000}
+      />
     </div>
   );
 };

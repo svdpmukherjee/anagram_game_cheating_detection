@@ -133,11 +133,7 @@ function App() {
           body: JSON.stringify({
             sessionId,
             prolificId,
-            wordMeanings: meanings.map((m) => ({
-              word: m.word,
-              providedMeaning: m.providedMeaning,
-              isCorrect: null,
-            })),
+            wordMeanings: meanings || [], // Add fallback
             completedAt: new Date().toISOString(),
           }),
         }
@@ -148,7 +144,6 @@ function App() {
         throw new Error(errorData.detail || "Failed to submit meanings");
       }
 
-      // Only proceed if submission was successful
       setCurrentStep(STEPS.DEBRIEF.id);
     } catch (error) {
       console.error("Error submitting meanings:", error);
